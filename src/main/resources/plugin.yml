@@ -1,0 +1,21 @@
+author: CmdrDats
+database: false
+description: "Building planner lets you mark out a zone for planning structures. When\
+  \ you enter that zone, you will enter a special 'mode' where you'll have access\
+  \ to every placeable block and you'll be able to instantly delete blocks.\r\n\r\n\
+  Once your planning is complete, the building will disappear and then you fill a\
+  \ special chest with the required building materials, as you fill it, the building\
+  \ will build itself!"
+generator: http://dinnerbone.com/minecraft/tools/pluginator/
+main: za.dats.bukkit.buildingplanner.BuildingPlanner
+name: BuildingPlanner
+startup: postworld
+url: https://github.com/CmdrDats/BuildingPlanner
+version: '0.1.0'
+commands:
+  plan:
+    aliases: [plancommand]
+    description: Building Planner commands
+    usage: |
+      Usage: /<command> version
+      Usage: /<command> version playername
