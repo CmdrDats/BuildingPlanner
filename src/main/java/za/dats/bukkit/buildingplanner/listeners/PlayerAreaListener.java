@@ -65,11 +65,13 @@ public class PlayerAreaListener extends PlayerListener {
 		area.unCommit();
 		return;
 	    }
-	    
+
 	    area.reportPlan(event.getPlayer());
-	    area.setCommitAttemptTime(clickDate);
-	    area.setCommitPlayer(event.getPlayer());
-	    event.getPlayer().sendMessage("To view this plan, right click the sign again within 5 seconds.");
+	    if (event.getPlayer().hasPermission("buildingplanner.uncommit")) {
+		area.setCommitAttemptTime(clickDate);
+		area.setCommitPlayer(event.getPlayer());
+		event.getPlayer().sendMessage("To view this plan, right click the sign again within 5 seconds.");
+	    }
 	    return;
 	}
 
@@ -82,11 +84,13 @@ public class PlayerAreaListener extends PlayerListener {
 	    return;
 	}
 
-	area.setCommitAttemptTime(clickDate);
-	area.setCommitPlayer(event.getPlayer());
 	area.reportPlan(event.getPlayer());
 
-	event.getPlayer().sendMessage("To commit this plan, right click the sign again within 5 seconds.");
+	if (event.getPlayer().hasPermission("buildingplanner.commit")) {
+	    area.setCommitAttemptTime(clickDate);
+	    area.setCommitPlayer(event.getPlayer());
+	    event.getPlayer().sendMessage("To commit this plan, right click the sign again within 5 seconds.");
+	}
     }
 
 }

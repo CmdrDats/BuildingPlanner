@@ -11,7 +11,7 @@ main: za.dats.bukkit.buildingplanner.BuildingPlanner
 name: BuildingPlanner
 startup: postworld
 url: https://github.com/CmdrDats/BuildingPlanner
-version: '0.1.0'
+version: '0.3.0'
 commands:
   plan:
     aliases: [plancommand]
@@ -19,3 +19,19 @@ commands:
     usage: |
       Usage: /<command> version
       Usage: /<command> version playername
+permissions:
+  buildingplanner.create:
+    description: Allows player to define a building area
+    default: true
+  buildingplanner.destroy:
+    description: Allows player to cancel a building area (by breaking the sign)
+    default: true
+  buildingplanner.use:
+    description: Allows player to use planning areas
+    default: true
+  buildingplanner.commit:
+    description: Allows player to commit planning areas
+    default: true
+  buildingplanner.uncommit:
+    description: Allows player to uncommit planning areas
+    default: true

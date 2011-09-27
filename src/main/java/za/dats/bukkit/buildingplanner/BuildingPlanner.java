@@ -14,7 +14,7 @@ public class BuildingPlanner extends JavaPlugin {
     public static PluginManager pm;
     private final static Pattern COLOR = Pattern.compile("&([a-fA-F0-9])");
     public PlanAreaManager areaManager;
-    
+
     public static void info(String log) {
 	plugin.getServer().getLogger().info("[BuildingPlanner] " + log);
     }
@@ -22,7 +22,7 @@ public class BuildingPlanner extends JavaPlugin {
     public void warn(String log) {
 	plugin.getServer().getLogger().warning("[BuildingPlanner] " + log);
     }
-    
+
     public static void debug(String log) {
 	plugin.getServer().getLogger().fine("[BuildingPlanner] " + log);
     }
@@ -33,17 +33,21 @@ public class BuildingPlanner extends JavaPlugin {
     }
 
     public void onEnable() {
-	// TODO: Place any custom enable code here, such as registering events
 	plugin = this;
 	Config.init(this);
-        getCommand("plan").setExecutor(new GivePluginCommand());
+	
+	if (!Config.isEnabled()) {
+	    info(pdf.getName() + " version " + pdf.getVersion() + " is DISABLED by configuration.");
+	    return;
+	}
+	getCommand("plan").setExecutor(new GivePluginCommand());
 
 	pm = getServer().getPluginManager();
 	pdf = getDescription();
 
 	areaManager = new PlanAreaManager();
 	areaManager.init();
-	
+
 	info(pdf.getName() + " version " + pdf.getVersion() + " is enabled!");
     }
 

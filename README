@@ -1,0 +1,32 @@
+BuildingPlanner
+---------------
+
+Ever want to plan your building or structure before actually gathering the materials for it? BuildingPlanner lets you designate a planning zone where you have infinite resources while inside that zone, then you can commit the plan, add the materials to the supply chest and watch your plan take shape.
+
+Not only does it let you place infinite blocks, but when you make mistakes, a single punch will clear a block instantly inside the planning zone.
+
+ChangeLog
+---------
+v0.3.0
+	- Add configuration options: enabled, defaultHeight, floorColour, gridColour
+	- Fences pop into supply chest after plan definition (config option)
+	- FIX: Stairs (and direction base blocks) were not remembering their direction correctly.
+	- FIX: Torches pop off walls sometimes
+	- FIX: Door & beds now remember both parts of their blocks in the plan.
+	- FIX: When placing doors & beds into chest, they get consumed and place correctly.
+	- FIX: Sign post and wall post didn't get consumed from supply chest and placed
+	- FIX: An issue with breaking doors and beds, especially beds when crossing boundaries
+	
+v0.2.0
+	- Added create, destroy, use, commit, uncommit permissions.
+	- When recommitting, the floor grid didn't reappear
+
+v0.1.0
+	- Initial core feature complete version.
+	
+Credits
+--------
+
+Mojang
+The Bukkit team
+The Spout team

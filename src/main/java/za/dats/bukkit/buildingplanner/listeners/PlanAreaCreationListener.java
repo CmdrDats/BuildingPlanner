@@ -15,6 +15,7 @@ import org.bukkit.event.block.BlockListener;
 import org.bukkit.event.block.SignChangeEvent;
 
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
+import za.dats.bukkit.buildingplanner.Config;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
 
 public class PlanAreaCreationListener extends BlockListener {
@@ -91,8 +92,17 @@ public class PlanAreaCreationListener extends BlockListener {
 	}
 
 	BuildingPlanner.debug("Handling non cancelled");
+	if (!(event.getBlock().getState() instanceof Sign)) {
+	    return;
+	}
 	Sign sign = (Sign) event.getBlock().getState();
 	if (!"[Plan]".equals(event.getLine(0))) {
+	    return;
+	}
+
+	if (!event.getPlayer().hasPermission("buildingplanner.create")) {
+	    event.getPlayer().sendMessage("You do not have permission to create a planning area");
+	    event.setCancelled(true);
 	    return;
 	}
 
@@ -122,19 +132,23 @@ public class PlanAreaCreationListener extends BlockListener {
 	traverse(area, leftBlock);
 
 	if (!area.fenceContains(rightBlock)) {
-	    event.setLine(1, BuildingPlanner.color("&EBoundaries not closed"));
+	    event.setLine(1, BuildingPlanner.color("&CBoundaries not closed"));
 	    return;
 	}
-	
+
 	try {
 	    area.setMaxY(area.getMinY() + Integer.parseInt(event.getLine(1)));
 	} catch (NumberFormatException e) {
-	    // Add the middle amount between the z and x size as an extra y size
-	    // Seems like a good height measure
-	    int extra = area.getMaxX()-area.getMinX()+area.getMaxZ()-area.getMinZ();
-	    area.setMaxY(area.getMaxY()+(extra/2));
+	    if (Config.getDefaultHeight() != 0) {
+		area.setMaxY(Config.getDefaultHeight());
+	    } else {
+		// Add the middle amount between the z and x size as an extra y size
+		// Seems like a good height measure
+		int extra = area.getMaxX() - area.getMinX() + area.getMaxZ() - area.getMinZ();
+		area.setMaxY(area.getMaxY() + (extra / 2));
+	    }
 	}
-	
+
 	area.init();
 
 	event.setLine(2, BuildingPlanner.color("&EOK"));

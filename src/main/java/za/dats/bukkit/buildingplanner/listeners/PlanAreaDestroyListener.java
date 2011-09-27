@@ -28,9 +28,14 @@ public class PlanAreaDestroyListener extends BlockListener {
 	    }
 	    
 	    if (area.fenceContains(event.getBlock()) || event.getBlock().equals(area.getSignBlock())) {
+		if (!event.getPlayer().hasPermission("buildingplanner.destroy")) {
+		    event.getPlayer().sendMessage("You do not have permission to destroy a planning area");
+		    event.setCancelled(true);
+		    return;
+		}
+		
 		BuildingPlanner.info("Destroying Plan");
 		area.restoreOriginalBlocks(false);
-		
 		
 		for (PlanAreaListener listener : listeners) {
 		    listener.destroy(area);

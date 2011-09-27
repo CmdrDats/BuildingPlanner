@@ -31,8 +31,7 @@ public class PlanAreaManager implements PlanAreaListener {
 
 	PlanAreaModificationListener areaModifyListener = new PlanAreaModificationListener(planAreas);
 	BuildingPlanner.pm.registerEvent(Type.BLOCK_BREAK, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
-	BuildingPlanner.pm.registerEvent(Type.BLOCK_PHYSICS, areaModifyListener, Priority.Normal,
-		BuildingPlanner.plugin);
+	BuildingPlanner.pm.registerEvent(Type.BLOCK_PHYSICS, areaModifyListener, Priority.Normal,BuildingPlanner.plugin);
 	BuildingPlanner.pm
 		.registerEvent(Type.BLOCK_DAMAGE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
 	BuildingPlanner.pm.registerEvent(Type.BLOCK_PLACE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
