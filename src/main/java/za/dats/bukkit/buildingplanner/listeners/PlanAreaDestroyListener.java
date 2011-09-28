@@ -20,6 +20,9 @@ public class PlanAreaDestroyListener extends BlockListener {
 
     @Override
     public void onBlockBreak(BlockBreakEvent event) {
+	if (event.isCancelled()) {
+	    return;
+	}
 	List<PlanArea> areas = new ArrayList<PlanArea>(planAreas);
 	for (PlanArea area : areas) {
 	    if (area.isFloorBlock(event.getBlock())) {

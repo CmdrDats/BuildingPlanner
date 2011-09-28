@@ -20,16 +20,9 @@ import za.dats.bukkit.buildingplanner.BuildingPlanner;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
 
 public class PlanAreaModificationListener extends BlockListener {
-
-    private final List<PlanArea> planAreas;
-
-    public PlanAreaModificationListener(List<PlanArea> planAreas) {
-	this.planAreas = planAreas;
-    }
-
     @Override
     public void onBlockDamage(BlockDamageEvent event) {
-	PlanArea area = getAffectedArea(event.getBlock());
+	PlanArea area = BuildingPlanner.plugin.areaManager.getAffectedArea(event.getBlock());
 	if (area == null) {
 	    return;
 	}
@@ -38,7 +31,6 @@ public class PlanAreaModificationListener extends BlockListener {
 	    return;
 	}
 
-	System.out.println("Block damage: " + event.getBlock().getState().getData());
 	if (area.isPlannedBlock(event.getBlock())) {
 	    BlockFace relativeDirection = null;
 	    Block block = event.getBlock();
@@ -65,6 +57,7 @@ public class PlanAreaModificationListener extends BlockListener {
 	super.onBlockDamage(event);
     }
 
+    /*
     @Override
     public void onBlockPhysics(BlockPhysicsEvent event) {
 	PlanArea area = getAffectedArea(event.getBlock());
@@ -80,11 +73,16 @@ public class PlanAreaModificationListener extends BlockListener {
 	event.setCancelled(true);
 	super.onBlockPhysics(event);
     }
+    */
 
     @Override
     public void onBlockBreak(BlockBreakEvent event) {
+	if (event.isCancelled()) {
+	    return;
+	}
+	
 	Block block = event.getBlock();
-	PlanArea area = getAffectedArea(block);
+	PlanArea area = BuildingPlanner.plugin.areaManager.getAffectedArea(block);
 	if (area == null) {
 	    return;
 	}
@@ -128,7 +126,7 @@ public class PlanAreaModificationListener extends BlockListener {
     public void onBlockPlace(BlockPlaceEvent event) {
 	final Block block = event.getBlock();
 	final Player player = event.getPlayer();
-	final PlanArea area = getAffectedArea(block);
+	final PlanArea area = BuildingPlanner.plugin.areaManager.getAffectedArea(block);
 	if (area == null) {
 	    return;
 	}
@@ -178,17 +176,4 @@ public class PlanAreaModificationListener extends BlockListener {
 	}
     }
 
-    private PlanArea getAffectedArea(Block block) {
-	for (PlanArea area : planAreas) {
-	    if (area.fenceContains(block) || block.equals(area.getSignBlock())) {
-		return null;
-	    }
-
-	    if (area.isInside(block)) {
-		return area;
-	    }
-	}
-
-	return null;
-    }
 }

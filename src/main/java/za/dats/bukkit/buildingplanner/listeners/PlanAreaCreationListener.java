@@ -118,8 +118,10 @@ public class PlanAreaCreationListener extends BlockListener {
 	}
 
 	PlanArea area = new PlanArea();
+	area.setName(event.getLine(1));
 	area.set(event.getBlock());
 	area.setSignBlock(event.getBlock());
+	area.setOwner(event.getPlayer().getName());
 
 	Block leftBlock = sign.getBlock().getRelative(left);
 	Block rightBlock = sign.getBlock().getRelative(right);
@@ -136,19 +138,22 @@ public class PlanAreaCreationListener extends BlockListener {
 	    return;
 	}
 
+	int maxY = area.getMaxY();
 	try {
-	    area.setMaxY(area.getMinY() + Integer.parseInt(event.getLine(1)));
+	    maxY = area.getMinY() + Integer.parseInt(event.getLine(2));
 	} catch (NumberFormatException e) {
 	    if (Config.getDefaultHeight() != 0) {
-		area.setMaxY(Config.getDefaultHeight());
+		maxY = Config.getDefaultHeight();
 	    } else {
 		// Add the middle amount between the z and x size as an extra y size
 		// Seems like a good height measure
 		int extra = area.getMaxX() - area.getMinX() + area.getMaxZ() - area.getMinZ();
-		area.setMaxY(area.getMaxY() + (extra / 2));
+		maxY = area.getMaxY() + (extra / 2);
 	    }
 	}
 
+	area.setMaxY(maxY);
+	
 	area.init();
 
 	event.setLine(2, BuildingPlanner.color("&EOK"));

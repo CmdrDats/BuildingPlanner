@@ -5,6 +5,7 @@ import java.io.FilenameFilter;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.bukkit.block.Block;
 import org.bukkit.event.Event.Priority;
 import org.bukkit.event.Event.Type;
 
@@ -12,6 +13,7 @@ import za.dats.bukkit.buildingplanner.listeners.PlanAreaCreationListener;
 import za.dats.bukkit.buildingplanner.listeners.PlanAreaDestroyListener;
 import za.dats.bukkit.buildingplanner.listeners.PlanAreaListener;
 import za.dats.bukkit.buildingplanner.listeners.PlanAreaModificationListener;
+import za.dats.bukkit.buildingplanner.listeners.PlanItemListener;
 import za.dats.bukkit.buildingplanner.listeners.PlayerAreaListener;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
 
@@ -29,18 +31,21 @@ public class PlanAreaManager implements PlanAreaListener {
 	BuildingPlanner.pm
 		.registerEvent(Type.BLOCK_BREAK, areaDestroyListener, Priority.Normal, BuildingPlanner.plugin);
 
-	PlanAreaModificationListener areaModifyListener = new PlanAreaModificationListener(planAreas);
+	PlanAreaModificationListener areaModifyListener = new PlanAreaModificationListener();
 	BuildingPlanner.pm.registerEvent(Type.BLOCK_BREAK, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
-	BuildingPlanner.pm.registerEvent(Type.BLOCK_PHYSICS, areaModifyListener, Priority.Normal,BuildingPlanner.plugin);
+	BuildingPlanner.pm.registerEvent(Type.BLOCK_PHYSICS, areaModifyListener, Priority.Normal,
+		BuildingPlanner.plugin);
 	BuildingPlanner.pm
 		.registerEvent(Type.BLOCK_DAMAGE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
 	BuildingPlanner.pm.registerEvent(Type.BLOCK_PLACE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
 
-	PlayerAreaListener movementListener = new PlayerAreaListener(planAreas);
+	PlayerAreaListener movementListener = new PlayerAreaListener();
 	BuildingPlanner.pm.registerEvent(Type.PLAYER_INTERACT, movementListener, Priority.Normal,
 		BuildingPlanner.plugin);
 
-	Thread supplyCheckThread = new Thread("PlanAreaSupplyChestCheck") {
+	BuildingPlanner.pm.registerEvent(Type.ITEM_SPAWN, new PlanItemListener(), Priority.Normal, BuildingPlanner.plugin);
+	
+	Thread supplyCheckThread = new Thread("PlanAreaSupplyThread") {
 	    @Override
 	    public void run() {
 		while (BuildingPlanner.plugin.isEnabled()) {
@@ -55,14 +60,41 @@ public class PlanAreaManager implements PlanAreaListener {
 		    } catch (Throwable e) {
 			e.printStackTrace();
 		    }
+
+		    try {
+			saveAreas();
+			// Catch all throwables so that the thread doesn't die if something breaks.
+		    } catch (Throwable e) {
+			e.printStackTrace();
+		    }
+
 		}
 	    }
 	};
 	supplyCheckThread.setDaemon(true);
 	supplyCheckThread.start();
-	
+
+	Thread saveThread = new Thread("PlanAreaSave") {
+	    @Override
+	    public void run() {
+		while (BuildingPlanner.plugin.isEnabled()) {
+
+		    try {
+			saveAreas();
+			Thread.sleep(1000);
+			// Catch all throwables so that the thread doesn't die if something breaks.
+		    } catch (Throwable e) {
+			e.printStackTrace();
+		    }
+
+		}
+	    }
+	};
+	saveThread.setDaemon(true);
+	saveThread.start();
+
 	File[] areaList = BuildingPlanner.plugin.getDataFolder().listFiles(new FilenameFilter() {
-	    
+
 	    public boolean accept(File dir, String name) {
 		if (name.endsWith(".area")) {
 		    return true;
@@ -70,14 +102,25 @@ public class PlanAreaManager implements PlanAreaListener {
 		return false;
 	    }
 	});
-	
+
 	for (File file : areaList) {
 	    PlanArea area = new PlanArea();
 	    area.loadArea(file);
 	    planAreas.add(area);
 	}
     }
-    
+
+    protected void saveAreas() {
+	for (PlanArea area : planAreas) {
+	    try {
+		area.trySave();
+		// If one area breaks, we don't want the rest to not save..
+	    } catch (Throwable e) {
+		e.printStackTrace();
+	    }
+	}
+    }
+
     protected boolean checkAreas() {
 	boolean result = false;
 	for (PlanArea area : planAreas) {
@@ -101,5 +144,20 @@ public class PlanAreaManager implements PlanAreaListener {
     public void destroy(PlanArea area) {
 	planAreas.remove(area);
 	area.deleteArea();
+    }
+    
+    public PlanArea getAffectedArea(Block block) {
+	for (PlanArea area : planAreas) {
+	    /*
+	    if (includeSignAndFence && (area.fenceContains(block) || block.equals(area.getSignBlock()))) {
+		return null;
+	    }*/
+
+	    if (area.isInside(block)) {
+		return area;
+	    }
+	}
+
+	return null;
     }
 }

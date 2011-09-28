@@ -7,7 +7,15 @@ Not only does it let you place infinite blocks, but when you make mistakes, a si
 
 ChangeLog
 ---------
+v0.4.0
+	- Plans can now have names if you enter it in the 2nd line of the sign, and the height needs to be specified on the 3rd line.
+	- Items can no longer spawn in the planning areas, don't drop your items!
+	- FIX: Plans now count beds and doors correctly.
+	- FIX: Attachable items got detached when plan was committed, it now removes attachable items first.
+	- FIX: Height of the area was purely the height of fences and not the calculation or sign value.
+
 v0.3.0
+	- Fixed a crippling performance issue with saving and loading the plan areas.
 	- Add configuration options: enabled, defaultHeight, floorColour, gridColour
 	- Fences pop into supply chest after plan definition (config option)
 	- FIX: Stairs (and direction base blocks) were not remembering their direction correctly.
@@ -15,7 +23,6 @@ v0.3.0
 	- FIX: Door & beds now remember both parts of their blocks in the plan.
 	- FIX: When placing doors & beds into chest, they get consumed and place correctly.
 	- FIX: Sign post and wall post didn't get consumed from supply chest and placed
-	- FIX: An issue with breaking doors and beds, especially beds when crossing boundaries
 	
 v0.2.0
 	- Added create, destroy, use, commit, uncommit permissions.

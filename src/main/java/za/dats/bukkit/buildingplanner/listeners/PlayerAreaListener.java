@@ -24,30 +24,13 @@ import za.dats.bukkit.buildingplanner.BuildingPlanner;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
 
 public class PlayerAreaListener extends PlayerListener {
-    private final List<PlanArea> planAreas;
-
-    public PlayerAreaListener(List<PlanArea> planAreas) {
-	this.planAreas = planAreas;
-    }
-
-    private PlanArea getAffectedArea(Location location) {
-	for (PlanArea area : planAreas) {
-
-	    if (area.isInside(location)) {
-		return area;
-	    }
-	}
-
-	return null;
-    }
-
     @Override
     public void onPlayerInteract(PlayerInteractEvent event) {
 	if (event.getAction() != Action.RIGHT_CLICK_BLOCK) {
 	    return;
 	}
 
-	PlanArea area = getAffectedArea(event.getClickedBlock().getLocation());
+	PlanArea area = BuildingPlanner.plugin.areaManager.getAffectedArea(event.getClickedBlock());
 	if (area == null) {
 	    return;
 	}

@@ -1,24 +1,21 @@
 package za.dats.bukkit.buildingplanner.model;
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
-import java.util.ArrayList;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.util.Date;
-import java.util.Formatter;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
-import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import org.bukkit.DyeColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.TreeSpecies;
-import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.entity.Player;
@@ -27,10 +24,6 @@ import org.bukkit.material.Bed;
 import org.bukkit.material.Door;
 import org.bukkit.material.MaterialData;
 import org.bukkit.material.SimpleAttachableMaterialData;
-import org.bukkit.material.Stairs;
-import org.bukkit.material.Step;
-import org.bukkit.material.Tree;
-import org.bukkit.material.Wool;
 import org.bukkit.util.config.Configuration;
 import org.bukkit.util.config.ConfigurationNode;
 
@@ -38,20 +31,108 @@ import za.dats.bukkit.buildingplanner.BuildingPlanner;
 import za.dats.bukkit.buildingplanner.Config;
 
 public class PlanArea {
-    private Block signBlock;
-    private Block supplyBlock;
+    static class BlockHelper {
+	// Block format is 0xRRDDMMMM
+	// Where R = reserved, D = data, M = material ID
+	static int getState(Material material, byte data) {
+	    int result = material.getId() & 0xFFFF;
+	    result += data << 16;
+	    return result;
+	}
 
-    private int minX, minY, minZ;
-    private int maxX, maxY, maxZ;
+	static Material getMaterial(int state) {
+	    short matType = (short) (state & 0xFFFF);
+	    return Material.getMaterial(matType);
+	}
+
+	static byte getData(int state) {
+	    byte data = (byte) (state >> 16 & 0xFF);
+	    return data;
+	}
+
+	public static int getSate(BlockState state) {
+	    return getState(state.getType(), state.getRawData());
+	}
+
+	public static boolean isAttachable(int state) {
+	    short matType = (short) (state & 0xFFFF);
+	    if (matType == 50
+		    || // Torch
+		    matType == 75
+		    || matType == 76
+		    || // Redstone torch
+		    matType == 55
+		    || // Redstone wire
+		    matType == 63
+		    || // Sign Post
+		    matType == 64
+		    || matType == 71
+		    || // Doors
+		    matType == 66 || matType == 68
+		    || matType == 6
+		    || // Sapling
+		    matType == 27 || matType == 28
+		    || matType == 66
+		    || // Rails
+		    matType == 30 || matType == 31
+		    || matType == 32
+		    || // Cobwebs, grass
+		    matType == 37 || matType == 38 || matType == 39 || matType == 40 || matType == 59 || matType == 65
+		    || matType == 70 || matType == 72 || matType == 77 || matType == 83 || matType == 93
+		    || matType == 94 || matType == 96) {
+		return true;
+	    }
+	    return false;
+	}
+
+	public static MaterialData getMaterialData(int state) {
+	    MaterialData newData = getMaterial(state).getNewData(getData(state));
+	    return newData;
+	}
+
+	public static boolean isAir(int state) {
+	    return (state & 0xFFFF) == 0;
+	}
+    }
+
+  
+
+    String name;
+    String owner;
+    Block signBlock;
+    Block supplyBlock;
+
+    int minX, minY, minZ;
+    int maxX, maxY, maxZ;
+    int sizeX, sizeY, sizeZ;
 
     private HashSet<Block> fenceBlocks = new HashSet<Block>();
-    // private HashSet<BlockState> originalBlocks = new HashSet<BlockState>();
-    private HashMap<String, BlockState> originalBlocks = new HashMap<String, BlockState>();
-    private TreeMap<String, BlockState> planBlocks = new TreeMap<String, BlockState>();
+    
+    private int[][][] originalBlocks;
+    private int[][][] planBlocks;
 
     private Player commitPlayer;
     private Date commitAttemptTime;
-    private boolean committed;
+    boolean committed;
+
+    private Date lastChange;
+    volatile boolean dirty;
+
+    public String getName() {
+	return name;
+    }
+
+    public void setName(String name) {
+	this.name = name;
+    }
+    
+    public String getOwner() {
+        return owner;
+    }
+
+    public void setOwner(String owner) {
+        this.owner = owner;
+    }
 
     public Block getSignBlock() {
 	return signBlock;
@@ -69,48 +150,28 @@ public class PlanArea {
 	return minX;
     }
 
-    public void setMinX(int minX) {
-	this.minX = minX;
-    }
-
     public int getMinY() {
 	return minY;
-    }
-
-    public void setMinY(int minY) {
-	this.minY = minY;
     }
 
     public int getMinZ() {
 	return minZ;
     }
 
-    public void setMinZ(int minZ) {
-	this.minZ = minZ;
-    }
-
     public int getMaxX() {
 	return maxX;
-    }
-
-    public void setMaxX(int maxX) {
-	this.maxX = maxX;
     }
 
     public int getMaxY() {
 	return maxY;
     }
 
-    public void setMaxY(int maxY) {
-	this.maxY = maxY;
-    }
-
     public int getMaxZ() {
 	return maxZ;
     }
 
-    public void setMaxZ(int maxZ) {
-	this.maxZ = maxZ;
+    public void setMaxY(int maxY) {
+	this.maxY = maxY;
     }
 
     public HashSet<Block> getFenceBlocks() {
@@ -176,10 +237,13 @@ public class PlanArea {
     }
 
     public void updateOriginalBlocks() {
-	for (int x = minX; x <= maxX; x++) {
-	    for (int y = minY - 1; y <= maxY; y++) {
-		for (int z = minZ; z <= maxZ; z++) {
-		    originalBlocks.put(getCoord(x, y, z), signBlock.getWorld().getBlockAt(x, y, z).getState());
+	for (int x = 0; x < sizeX; x++) {
+	    for (int y = 0; y < sizeY; y++) {
+		for (int z = 0; z < sizeZ; z++) {
+		    Block blockAt = signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ);
+		    BlockState state = blockAt.getState();
+		    
+		    originalBlocks[x][y][z] = BlockHelper.getSate(state);
 		}
 	    }
 	}
@@ -188,6 +252,14 @@ public class PlanArea {
     }
 
     public void init() {
+	minY -= 1;
+	this.sizeX = maxX - minX + 1;
+	this.sizeY = maxY - minY + 1;
+	this.sizeZ = maxZ - minZ + 1;
+
+	originalBlocks = new int[sizeX][sizeY][sizeZ];
+	planBlocks = new int[sizeX][sizeY][sizeZ];
+
 	if (Config.isFenceLiftEnabled()) {
 	    liftFences();
 	}
@@ -217,26 +289,18 @@ public class PlanArea {
 	}
     }
 
-    private static String getCoord(int x, int y, int z) {
-	return String.format("%1$08dx%3$08dx%2$08d", x, y, z);
-    }
-
-    private String getCoord(Location loc) {
-	return getCoord(loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
-    }
-
     private void placeBottomZone() {
 	for (int x = minX; x <= maxX; x++) {
 	    for (int z = minZ; z <= maxZ; z++) {
 		int xOffset = x - minX;
 		int zOffset = z - minZ;
 
-		signBlock.getWorld().getBlockAt(x, minY - 1, z).setType(Material.WOOL);
+		signBlock.getWorld().getBlockAt(x, minY, z).setType(Material.WOOL);
 		// Make white wool grid every 5 blocks.
 		if (xOffset % 5 != 0 && zOffset % 5 != 0) {
-		    signBlock.getWorld().getBlockAt(x, minY - 1, z).setData((byte) Config.getFloorColour().getData());
+		    signBlock.getWorld().getBlockAt(x, minY, z).setData((byte) Config.getFloorColour().getData());
 		} else {
-		    signBlock.getWorld().getBlockAt(x, minY - 1, z).setData((byte) Config.getGridColour().getData());
+		    signBlock.getWorld().getBlockAt(x, minY, z).setData((byte) Config.getGridColour().getData());
 		}
 
 	    }
@@ -245,74 +309,120 @@ public class PlanArea {
     }
 
     private interface AreaCycler {
-	void cycle(int x, int y, int z);
+	/**
+	 * @return false if cycling should stop.
+	 */
+	boolean cycle(int x, int y, int z);
     }
 
     public void cycleArea(AreaCycler cycler) {
-	for (int x = minX; x <= maxX; x++) {
-	    for (int z = minZ - 1; z <= maxZ; z++) {
-		for (int y = minY; y <= maxY; y++) {
-		    cycler.cycle(x, y, z);
+	for (int y = 0; y < sizeY; y++) {
+	    for (int x = 0; x < sizeX; x++) {
+		for (int z = 0; z < sizeZ; z++) {
+		    if (!cycler.cycle(x, y, z)) {
+			return;
+		    }
 		}
 	    }
 	}
     }
 
-    private void restoreBlockPlan(final Map<String, BlockState> blockMap, final boolean ignoreSupplyChest) {
+    private void restoreBlockPlan(final int[][][] blockMap, final boolean ignoreSupplyChest, final boolean restoreAir,
+	    boolean flip) {
+	// Overwrite attachables first.
+	AreaCycler removeAttachablesCycler = new AreaCycler() {
+	    public boolean cycle(int x, int y, int z) {
+		if (ignoreSupplyChest) {
+		    if (supplyBlock.getLocation().getBlockX() == x + minX
+			    && supplyBlock.getLocation().getBlockY() == y + minY
+			    && supplyBlock.getLocation().getBlockZ() == z + minZ) {
+
+			return true;
+		    }
+		}
+		int state = blockMap[x][y][z];
+
+		if (!restoreAir && BlockHelper.isAir(state)) {
+		    return true;
+		}
+
+		Block block = signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ);
+		if (block.getState().getData() instanceof SimpleAttachableMaterialData) {
+		    signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ)
+			    .setType(BlockHelper.getMaterial(state));
+		    signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ).setData(BlockHelper.getData(state));
+		}
+
+		return true;
+	    }
+	};
+
 	// Restore basic blocks
-	cycleArea(new AreaCycler() {
-	    public void cycle(int x, int y, int z) {
+	AreaCycler solidBlockCycler = new AreaCycler() {
+	    public boolean cycle(int x, int y, int z) {
 		if (ignoreSupplyChest) {
-		    Block block = signBlock.getWorld().getBlockAt(x, y, z);
-		    if (block == supplyBlock) {
-			return;
+		    if (supplyBlock.getLocation().getBlockX() == x + minX
+			    && supplyBlock.getLocation().getBlockY() == y + minY
+			    && supplyBlock.getLocation().getBlockZ() == z + minZ) {
+
+			return true;
 		    }
 		}
-		BlockState state = blockMap.get(getCoord(x, y, z));
-		if (state == null) {
-		    return;
+		int state = blockMap[x][y][z];
+		if (BlockHelper.isAttachable(state)) {
+		    return true;
 		}
 
-		if (state.getData() instanceof SimpleAttachableMaterialData) {
-		    return;
+		if (!restoreAir && BlockHelper.isAir(state)) {
+		    return true;
 		}
 
-		state.update(true);
-		// signBlock.getWorld().getBlockAt(x, y, z).setType(state.getType());
-		// signBlock.getWorld().getBlockAt(x, y, z).setData(state.getData().getData());
+		signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ).setType(BlockHelper.getMaterial(state));
+		signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ).setData(BlockHelper.getData(state));
+
+		return true;
 	    }
-	});
+	};
 
-	// RestoreAttachables
-	cycleArea(new AreaCycler() {
-	    public void cycle(int x, int y, int z) {
+	// Restore Attachables
+	AreaCycler attachableCycler = new AreaCycler() {
+	    public boolean cycle(int x, int y, int z) {
 		if (ignoreSupplyChest) {
-		    Block block = signBlock.getWorld().getBlockAt(x, y, z);
-		    if (block == supplyBlock) {
-			return;
+		    if (supplyBlock.getLocation().getBlockX() == x + minX
+			    && supplyBlock.getLocation().getBlockY() == y + minY
+			    && supplyBlock.getLocation().getBlockZ() == z + minZ) {
+
+			return true;
 		    }
 		}
-		BlockState state = blockMap.get(getCoord(x, y, z));
-		if (state == null) {
-		    return;
+
+		int state = blockMap[x][y][z];
+		if (!BlockHelper.isAttachable(state)) {
+		    return true;
 		}
 
-		if (!(state.getData() instanceof SimpleAttachableMaterialData)) {
-		    return;
+		if (!restoreAir && BlockHelper.isAir(state)) {
+		    return true;
 		}
-		state.update(true);
-		// signBlock.getWorld().getBlockAt(x, y, z).setType(state.getType());
-		// signBlock.getWorld().getBlockAt(x, y, z).setData(state.getData().getData());
+
+		signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ).setType(BlockHelper.getMaterial(state));
+		signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ).setData(BlockHelper.getData(state));
+
+		return true;
 	    }
-	});
+	};
+
+	cycleArea(removeAttachablesCycler);
+	cycleArea(solidBlockCycler);
+	cycleArea(attachableCycler);
     }
 
     public void restoreOriginalBlocks(final boolean ignoreSupplyChest) {
-	restoreBlockPlan(originalBlocks, ignoreSupplyChest);
+	restoreBlockPlan(originalBlocks, ignoreSupplyChest, true, true);
     }
 
     public void restorePlanBlocks() {
-	restoreBlockPlan(planBlocks, true);
+	restoreBlockPlan(planBlocks, true, false, false);
     }
 
     public void commit() {
@@ -330,7 +440,7 @@ public class PlanArea {
 
     public boolean isFloorBlock(Block block) {
 	Location loc = block.getLocation();
-	if (loc.getBlockY() != minY - 1) {
+	if (loc.getBlockY() != minY) {
 	    return false;
 	}
 
@@ -367,31 +477,58 @@ public class PlanArea {
 
     public void addOriginalBlock(Block block, boolean save) {
 	Location loc = block.getLocation();
-	planBlocks.remove(getCoord(loc));
-	originalBlocks.put(getCoord(loc), block.getState());
+
+	updateBlock(planBlocks, loc, 0);
+	updateBlock(originalBlocks, loc, BlockHelper.getSate(block.getState()));
 
 	if (save) {
 	    saveArea();
 	}
     }
-    
+
+    private void updateBlock(int[][][] blockMap, Location loc, int state) {
+	int x = loc.getBlockX() - minX;
+	int y = loc.getBlockY() - minY;
+	int z = loc.getBlockZ() - minZ;
+
+	// Check bounds.
+	if ((x < 0 || x >= sizeX) || (y < 0 || y >= sizeY) || (z < 0 || z >= sizeZ)) {
+	    return;
+	}
+
+	blockMap[x][y][z] = state;
+    }
+
+    private int getBlock(int[][][] blockMap, Location loc) {
+	int x = loc.getBlockX() - minX;
+	int y = loc.getBlockY() - minY;
+	int z = loc.getBlockZ() - minZ;
+
+	// Check bounds.
+	if ((x < 0 || x >= sizeX) || (y < 0 || y >= sizeY) || (z < 0 || z >= sizeZ)) {
+	    return 0;
+	}
+
+	return blockMap[x][y][z];
+    }
+
     public void addOriginalBlock(Location loc, BlockState state) {
-	planBlocks.remove(getCoord(loc));
-	originalBlocks.put(getCoord(loc), state);
+	updateBlock(planBlocks, loc, 0);
+	updateBlock(originalBlocks, loc, BlockHelper.getSate(state));
 	saveArea();
     }
- 
 
     public void addPlanBlock(Block block) {
 	Location loc = block.getLocation();
 	BlockState state = block.getState();
-	System.out.println(state.getData());
-	planBlocks.put(getCoord(loc), state);
+
+	updateBlock(planBlocks, loc, BlockHelper.getSate(state));
 	saveArea();
     }
 
     public void removePlannedBlock(Block block, boolean save) {
-	planBlocks.remove(getCoord(block.getLocation()));
+	updateBlock(planBlocks, block.getLocation(), 0);
+
 	if (save) {
 	    saveArea();
 	}
@@ -399,14 +536,14 @@ public class PlanArea {
 
     public boolean isPlannedBlock(Block block) {
 	Location location = block.getLocation();
-	String coord = getCoord(location);
-	if (planBlocks.containsKey(coord)) {
-	    return true;
+
+	int state = getBlock(planBlocks, location);
+	if (BlockHelper.isAir(state)) {
+	    return false;
 	}
 
-	return false;
+	return true;
     }
-
 
     public void reportPlan(Player player) {
 	HashMap<String, AtomicLong> counts = getMaterialCount();
@@ -423,19 +560,44 @@ public class PlanArea {
 	}
     }
 
-    private String getMaterialDataString(MaterialData data) {
+    private String getMaterialDataString(int state) {
 	String result = null;
-	Material type = data.getItemType();
+	Material type = BlockHelper.getMaterial(state);
+	MaterialData data = BlockHelper.getMaterialData(state);
+	if (data instanceof Door) {
+	    Door door = (Door) data;
+	    if (door.isTopHalf()) {
+		return null;
+	    }
+	} else if (data instanceof Bed) {
+	    Bed bed = (Bed) data;
+	    if (bed.isHeadOfBed()) {
+		return null;
+	    }
+	}
+
 	// Switch out the special item based blocks to their primitive state
 	switch (type) {
 	case REDSTONE_WIRE:
 	    result = Material.REDSTONE.toString();
+	    break;
 	case WOODEN_DOOR:
 	    result = Material.WOOD_DOOR.toString();
+	    break;
+	case IRON_DOOR_BLOCK:
+	    result = Material.IRON_DOOR.toString();
+	    break;
+	case BED_BLOCK:
+	    result = Material.BED.toString();
+	    break;
 	}
 
 	if (result == null) {
-	    result = data.toString().replaceAll("[(].*", "");
+	    if (data != null) {
+		result = data.toString().replaceAll("[(].*", "");
+	    } else {
+		result = type.toString();
+	    }
 	}
 
 	return result;
@@ -443,40 +605,54 @@ public class PlanArea {
     }
 
     private HashMap<String, AtomicLong> getMaterialCount() {
-	HashMap<String, AtomicLong> counts = new HashMap<String, AtomicLong>();
-	for (BlockState block : planBlocks.values()) {
-	    String key = getMaterialDataString(block.getData());
+	final HashMap<String, AtomicLong> counts = new HashMap<String, AtomicLong>();
 
-	    AtomicLong count = counts.get(key);
-	    if (count == null) {
-		count = new AtomicLong();
-		counts.put(key, count);
+	cycleArea(new AreaCycler() {
+	    public boolean cycle(int x, int y, int z) {
+		int state = planBlocks[x][y][z];
+
+		if (BlockHelper.isAir(state)) {
+		    return true;
+		}
+
+		String key = getMaterialDataString(state);
+		if (key == null) {
+		    return true;
+		}
+
+		AtomicLong count = counts.get(key);
+		if (count == null) {
+		    count = new AtomicLong();
+		    counts.put(key, count);
+		}
+		count.incrementAndGet();
+
+		return true;
 	    }
-	    count.incrementAndGet();
-	}
+	});
 
 	return counts;
     }
 
-    private boolean isItemForPlanBlock(ItemStack stack, BlockState block) {
+    private boolean isItemForPlanBlock(ItemStack stack, int state, MaterialData data) {
 	// Don't place top half of door block.
-	if (block.getData() instanceof Door) {
-	    Door door = (Door) block.getData();
+	if (data instanceof Door) {
+	    Door door = (Door) data;
 	    if (door.isTopHalf()) {
 		return false;
 	    }
 	}
 
 	// Don't place end of bed.
-	if (block.getData() instanceof Bed) {
-	    Bed bed = (Bed) block.getData();
+	if (data instanceof Bed) {
+	    Bed bed = (Bed) data;
 	    if (!bed.isHeadOfBed()) {
 		return false;
 	    }
 	}
 
 	Material itemMaterial = stack.getType();
-	Material blockMaterial = block.getType();
+	Material blockMaterial = BlockHelper.getMaterial(state);
 	if (itemMaterial.equals(Material.REDSTONE) && blockMaterial.equals(Material.REDSTONE_WIRE)) {
 	    return true;
 	}
@@ -500,7 +676,7 @@ public class PlanArea {
 	case LOG:
 	case STEP:
 	case DOUBLE_STEP:
-	    return itemMaterial.equals(blockMaterial) && stack.getDurability() == block.getData().getData();
+	    return itemMaterial.equals(blockMaterial) && stack.getDurability() == BlockHelper.getData(state);
 	}
 
 	// Every other normal block can do a simple type comparison.
@@ -511,83 +687,74 @@ public class PlanArea {
 	return false;
     }
 
-    public boolean buildFromSupply(int maxItems) {
-	int count = 0;
+    public boolean buildFromSupply(final int maxItems) {
 	if (!(supplyBlock.getState() instanceof Chest)) {
 	    return false;
 	}
-	Chest chest = (Chest) supplyBlock.getState();
-	ItemStack[] contents = chest.getInventory().getContents();
-	List<String> buildBlockLocations = new ArrayList<String>();
+	final Chest chest = (Chest) supplyBlock.getState();
+	final ItemStack[] contents = chest.getInventory().getContents();
+	final AtomicInteger count = new AtomicInteger();
 
-	for (int i = 0; i < contents.length; i++) {
-	    ItemStack itemStack = contents[i];
-	    if (itemStack == null) {
-		continue;
-	    }
-
-	    for (String location : planBlocks.keySet()) {
-		BlockState planBlock = planBlocks.get(location);
-
-		// planBlock.getData()
-		// Ignore fulfilled blocks.
-		if (buildBlockLocations.contains(location)) {
-		    continue;
-		}
-
-		if (isItemForPlanBlock(itemStack, planBlock)) {
-		    int amount = itemStack.getAmount();
-		    amount--;
-		    count++;
-
-		    buildBlockLocations.add(location);
-		    // Add the top of the door
-		    if (planBlock.getData() instanceof Door) {
-			Door door = (Door) planBlock.getData();
-			if (!door.isTopHalf()) {
-			    Block relative = planBlock.getBlock().getRelative(BlockFace.UP);
-			    buildBlockLocations.add(getCoord(relative.getLocation()));
-			}
+	cycleArea(new AreaCycler() {
+	    public boolean cycle(int x, int y, int z) {
+		for (int i = 0; i < contents.length; i++) {
+		    final ItemStack itemStack = contents[i];
+		    if (itemStack == null) {
+			continue;
 		    }
 
-		    // Add the end of the bed.
-		    if (planBlock.getData() instanceof Bed) {
-			Bed bed = (Bed) planBlock.getData();
-			if (bed.isHeadOfBed()) {
-			    Block relative = planBlock.getBlock().getRelative(bed.getFacing().getOppositeFace());
-			    buildBlockLocations.add(getCoord(relative.getLocation()));
+		    int state = planBlocks[x][y][z];
+		    MaterialData data = BlockHelper.getMaterialData(planBlocks[x][y][z]);
+		    if (isItemForPlanBlock(itemStack, state, data)) {
+			int amount = itemStack.getAmount();
+			amount--;
+			if (amount == 0) {
+			    chest.getInventory().setItem(i, null);
+			} else {
+			    itemStack.setAmount(amount);
 			}
-		    }
 
-		    if (amount == 0) {
-			chest.getInventory().setItem(i, null);
-		    } else {
-			itemStack.setAmount(amount);
+			count.incrementAndGet();
+
+			Block planBlock = signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ);
+			// Add the top of the door
+			if (data instanceof Door) {
+			    Door door = (Door) data;
+			    if (!door.isTopHalf()) {
+				buildBlock(x, y + 1, z);
+			    }
+			}
+
+			// Add the end of the bed.
+			if (data instanceof Bed) {
+			    Bed bed = (Bed) data;
+			    if (bed.isHeadOfBed()) {
+				Block relative = planBlock.getRelative(bed.getFacing().getOppositeFace());
+				Location loc = relative.getLocation();
+				buildBlock(loc.getBlockX() - minX, loc.getBlockY() - minY, loc.getBlockZ() - minZ);
+			    }
+			}
+
+			buildBlock(x, y, z);
+
+			// Stop looking when count is reached
+			if (count.get() >= maxItems || amount == 0) {
+			    return false;
+			}
 		    }
 
 		    // Stop looking when count is reached
-		    if (count >= maxItems || amount == 0) {
-			break;
+		    if (count.get() >= maxItems) {
+			return false;
 		    }
+
 		}
+
+		return true;
 	    }
+	});
 
-	    // Stop looking when count is reached
-	    if (count >= maxItems) {
-		break;
-	    }
-
-	}
-
-	for (String key : buildBlockLocations) {
-	    BlockState planBlock = planBlocks.get(key);
-	    planBlock.update(true);
-	    // planBlock.getBlock().setType(planBlock.getType());
-	    // planBlock.getBlock().setData(planBlock.getRawData());
-	    addOriginalBlock(planBlock.getBlock(), false);
-	}
-
-	if (buildBlockLocations.size() > 0) {
+	if (count.get() > 0) {
 	    saveArea();
 	    return true;
 	}
@@ -595,116 +762,192 @@ public class PlanArea {
 	return false;
     }
 
-    public File getAreaFile() {
-	String fileName = getCoord(signBlock.getLocation()) + ".area";
+    protected void buildBlock(int x, int y, int z) {
+	int state = planBlocks[x][y][z];
+	Block block = signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ);
+	block.setType(BlockHelper.getMaterial(state));
+	block.setData(BlockHelper.getData(state));
+	addOriginalBlock(block, false);
+	planBlocks[x][y][z] = 0;
+    }
+
+    public File getAreaDataFile() {
+	String fileName = OldReader.getCoord(signBlock.getLocation()) + ".data";
+	File areaFile = new File(BuildingPlanner.plugin.getDataFolder(), fileName);
+	return areaFile;
+    }
+
+    public File getAreaDescriptorFile() {
+	String fileName = OldReader.getCoord(signBlock.getLocation()) + ".area";
 	File areaFile = new File(BuildingPlanner.plugin.getDataFolder(), fileName);
 	return areaFile;
     }
 
     public void deleteArea() {
-	File areaFile = getAreaFile();
+	File areaFile = getAreaDataFile();
 	if (areaFile.exists()) {
 	    areaFile.delete();
+	}
+	File areaDescFile = getAreaDescriptorFile();
+	if (areaDescFile.exists()) {
+	    areaDescFile.delete();
 	}
     }
 
     public void saveArea() {
-	Configuration area = new Configuration(getAreaFile());
-	area.setProperty("committed", committed);
-	area.setProperty("signLocation", locationToString(signBlock.getLocation()));
-	area.setProperty("supplyLocation", locationToString(supplyBlock.getLocation()));
-	area.setProperty("minLocation", locationToString(new Location(signBlock.getWorld(), minX, minY, minZ)));
-	area.setProperty("maxLocation", locationToString(new Location(signBlock.getWorld(), maxX, maxY, maxZ)));
-
-	int fenceCount = 0;
-	for (Block fence : fenceBlocks) {
-	    area.setProperty("fenceBlock." + fenceCount, locationToString(fence.getLocation()));
-	}
-
-	for (String key : originalBlocks.keySet()) {
-	    area.setProperty("originalBlocks." + key, blockStateToConfig(originalBlocks.get(key)));
-	}
-
-	for (String key : planBlocks.keySet()) {
-	    area.setProperty("planBlocks." + key, blockStateToConfig(planBlocks.get(key)));
-	}
-
-	area.save();
-    }
-
-    private HashMap<String, Object> blockStateToConfig(BlockState blockState) {
-	HashMap<String, Object> result = new HashMap<String, Object>();
-
-	result.put("location", locationToString(blockState.getBlock().getLocation()));
-	result.put("type", blockState.getType().toString());
-	result.put("dataByte", (int) blockState.getRawData());
-	return result;
-    }
-
-    private BlockState configToBlockState(ConfigurationNode node) {
-	Location l = stringToLocation(node.getString("location"));
-	BlockState result = l.getBlock().getState();
-
-	Material m = Material.valueOf(node.getString("type"));
-	result.setType(m);
-
-	if (m.getData() != null) {
-	    MaterialData newData = m.getNewData((byte) node.getInt("dataByte", 0));
-	    result.setData(newData);
-	}
-
-	return result;
+	dirty = true;
+	lastChange = new Date();
     }
 
     public void loadArea(File areaFile) {
 	Configuration config = new Configuration(areaFile);
 	config.load();
 
+	name = config.getString("name", "");
+	owner = config.getString("owner", "");
 	committed = config.getBoolean("committed", false);
-	Location signLocation = stringToLocation(config.getString("signLocation", ""));
+	boolean newFormat = config.getBoolean("newFormat", false);
+	Location signLocation = OldReader.stringToLocation(config.getString("signLocation", ""));
 	signBlock = signLocation.getBlock();
 
-	Location supplyLocation = stringToLocation(config.getString("supplyLocation", ""));
+	Location supplyLocation = OldReader.stringToLocation(config.getString("supplyLocation", ""));
 	supplyBlock = supplyLocation.getBlock();
 
-	Location minLocation = stringToLocation(config.getString("minLocation", ""));
+	Location minLocation = OldReader.stringToLocation(config.getString("minLocation", ""));
 	minX = minLocation.getBlockX();
 	minY = minLocation.getBlockY();
 	minZ = minLocation.getBlockZ();
 
-	Location maxLocation = stringToLocation(config.getString("maxLocation", ""));
+	// Pull the minY down a notch on old format files.
+	if (!newFormat) {
+	    minY--;
+	}
+
+	Location maxLocation = OldReader.stringToLocation(config.getString("maxLocation", ""));
 	maxX = maxLocation.getBlockX();
 	maxY = maxLocation.getBlockY();
 	maxZ = maxLocation.getBlockZ();
 
+	sizeX = maxX - minX + 1;
+	sizeY = maxY - minY + 1;
+	sizeZ = maxZ - minZ + 1;
+	
+	originalBlocks = new int[sizeX][sizeY][sizeZ];
+	planBlocks = new int[sizeX][sizeY][sizeZ];
+
+	File areaDataFile = getAreaDataFile();
+	try {
+	    if (areaDataFile.exists()) {
+		FileInputStream in = new FileInputStream(areaDataFile);
+
+		DataInputStream inStream = new DataInputStream(in);
+
+		for (int x = 0; x < sizeX; x++) {
+		    for (int y = 0; y < sizeY; y++) {
+			for (int z = 0; z < sizeZ; z++) {
+			    originalBlocks[x][y][z] = inStream.readInt();
+			}
+		    }
+		}
+		for (int x = 0; x < sizeX; x++) {
+		    for (int y = 0; y < sizeY; y++) {
+			for (int z = 0; z < sizeZ; z++) {
+			    planBlocks[x][y][z] = inStream.readInt();
+			}
+		    }
+		}
+
+		inStream.close();
+		in.close();
+	    }
+	} catch (Exception e) {
+	    e.printStackTrace();
+	}
+
+	// Load areas generated in the old version of the plugin and then immediately resave to the newer format.
+	boolean save = false;
 	List<String> originalKeys = config.getKeys("originalBlocks");
 	if (originalKeys != null) {
-	    originalBlocks.clear();
+
 	    for (String key : originalKeys) {
-		originalBlocks.put(key, (BlockState) configToBlockState(config.getNode("originalBlocks." + key)));
+		save = true;
+		Location loc = OldReader.stringToLocation(config.getString("originalBlocks." + key + ".location"));
+		BlockState blockState = OldReader.configToBlockState(config.getNode("originalBlocks." + key));
+		updateBlock(originalBlocks, loc, BlockHelper.getSate(blockState));
 	    }
 	}
 
 	List<String> planKeys = config.getKeys("planBlocks");
-	planBlocks.clear();
 	if (planKeys != null) {
 	    for (String key : planKeys) {
-		planBlocks.put(key, (BlockState) configToBlockState(config.getNode("planBlocks." + key)));
+		save = true;
+		Location loc = OldReader.stringToLocation(config.getString("planBlocks." + key + ".location"));
+		BlockState blockState = OldReader.configToBlockState(config.getNode("planBlocks." + key));
+		// Location convertCoord = OldReader.convertCoord(signLocation.getWorld(), key);
+		updateBlock(planBlocks, loc, BlockHelper.getSate(blockState));
 	    }
+	}
+
+	if (save) {
+	    saveArea();
 	}
     }
 
-    public String locationToString(Location location) {
-	return location.getWorld().getUID() + ":" + location.getBlockX() + ":" + location.getBlockY() + ":"
-		+ location.getBlockZ() + ":" + location.getPitch() + ":" + location.getYaw();
-    }
+    public void trySave() {
+	if ((!dirty) || lastChange == null) {
+	    return;
+	}
 
-    public Location stringToLocation(String string) {
-	String[] split = string.split(":");
-	World world = BuildingPlanner.plugin.getServer().getWorld(UUID.fromString(split[0]));
+	Date now = new Date();
+	if (now.getTime() - lastChange.getTime() < 5000) {
+	    return;
+	}
+	dirty = false;
+	BuildingPlanner.info("Saving area.");
+	Configuration area = new Configuration(getAreaDescriptorFile());
+	area.setProperty("name", name);
+	area.setProperty("owner", owner);
+	area.setProperty("committed", committed);
+	area.setProperty("newFormat", true);
+	area.setProperty("signLocation", OldReader.locationToString(signBlock.getLocation()));
+	area.setProperty("supplyLocation", OldReader.locationToString(supplyBlock.getLocation()));
+	area.setProperty("minLocation",
+		OldReader.locationToString(new Location(signBlock.getWorld(), minX, minY, minZ)));
+	area.setProperty("maxLocation",
+		OldReader.locationToString(new Location(signBlock.getWorld(), maxX, maxY, maxZ)));
 
-	Location location = new Location(world, Double.parseDouble(split[1]), Double.parseDouble(split[2]),
-		Double.parseDouble(split[3]), Float.parseFloat(split[4]), Float.parseFloat(split[5]));
-	return location;
+	int fenceCount = 0;
+	for (Block fence : fenceBlocks) {
+	    area.setProperty("fenceBlock." + fenceCount, OldReader.locationToString(fence.getLocation()));
+	}
+
+	try {
+	    File areaData = getAreaDataFile();
+	    final FileOutputStream out = new FileOutputStream(areaData);
+	    DataOutputStream outStream = new DataOutputStream(out);
+
+	    for (int x = 0; x < sizeX; x++) {
+		for (int y = 0; y < sizeY; y++) {
+		    for (int z = 0; z < sizeZ; z++) {
+			outStream.writeInt(originalBlocks[x][y][z]);
+		    }
+		}
+	    }
+	    for (int x = 0; x < sizeX; x++) {
+		for (int y = 0; y < sizeY; y++) {
+		    for (int z = 0; z < sizeZ; z++) {
+			outStream.writeInt(planBlocks[x][y][z]);
+		    }
+		}
+	    }
+
+	    outStream.close();
+	    out.close();
+	} catch (Exception e) {
+	    e.printStackTrace();
+	}
+
+	area.save();
+
     }
 }
