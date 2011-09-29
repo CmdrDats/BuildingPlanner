@@ -95,8 +95,6 @@ public class PlanArea {
 	}
     }
 
-  
-
     String name;
     String owner;
     Block signBlock;
@@ -107,7 +105,7 @@ public class PlanArea {
     int sizeX, sizeY, sizeZ;
 
     private HashSet<Block> fenceBlocks = new HashSet<Block>();
-    
+
     private int[][][] originalBlocks;
     private int[][][] planBlocks;
 
@@ -125,13 +123,13 @@ public class PlanArea {
     public void setName(String name) {
 	this.name = name;
     }
-    
+
     public String getOwner() {
-        return owner;
+	return owner;
     }
 
     public void setOwner(String owner) {
-        this.owner = owner;
+	this.owner = owner;
     }
 
     public Block getSignBlock() {
@@ -215,7 +213,7 @@ public class PlanArea {
 	// fenceBlocks.add(block);
     }
 
-    public void add(Block block) {
+    public void add(Block block, boolean fence) {
 	if (supplyBlock == null) {
 	    supplyBlock = block;
 	}
@@ -229,7 +227,9 @@ public class PlanArea {
 	maxY = Math.max(maxY, blockLocation.getBlockY());
 	maxZ = Math.max(maxZ, blockLocation.getBlockZ());
 
-	fenceBlocks.add(block);
+	if (fence) {
+	    fenceBlocks.add(block);
+	}
     }
 
     public boolean fenceContains(Block block) {
@@ -242,7 +242,7 @@ public class PlanArea {
 		for (int z = 0; z < sizeZ; z++) {
 		    Block blockAt = signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ);
 		    BlockState state = blockAt.getState();
-		    
+
 		    originalBlocks[x][y][z] = BlockHelper.getSate(state);
 		}
 	    }
@@ -661,6 +661,11 @@ public class PlanArea {
 	    return true;
 	}
 
+	if (itemMaterial.equals(Material.STEP) && blockMaterial.equals(Material.DOUBLE_STEP)
+		&& stack.getDurability() == BlockHelper.getData(state) && stack.getAmount() >= 2) {
+	    return true;
+	}
+
 	switch (itemMaterial) {
 	case REDSTONE:
 	    return blockMaterial.equals(Material.REDSTONE_WIRE);
@@ -675,7 +680,6 @@ public class PlanArea {
 	case WOOL:
 	case LOG:
 	case STEP:
-	case DOUBLE_STEP:
 	    return itemMaterial.equals(blockMaterial) && stack.getDurability() == BlockHelper.getData(state);
 	}
 
@@ -708,7 +712,12 @@ public class PlanArea {
 		    if (isItemForPlanBlock(itemStack, state, data)) {
 			int amount = itemStack.getAmount();
 			amount--;
-			if (amount == 0) {
+
+			if (BlockHelper.getMaterial(state).equals(Material.DOUBLE_STEP)) {
+			    amount--;
+			}
+
+			if (amount <= 0) {
 			    chest.getInventory().setItem(i, null);
 			} else {
 			    itemStack.setAmount(amount);
@@ -831,7 +840,7 @@ public class PlanArea {
 	sizeX = maxX - minX + 1;
 	sizeY = maxY - minY + 1;
 	sizeZ = maxZ - minZ + 1;
-	
+
 	originalBlocks = new int[sizeX][sizeY][sizeZ];
 	planBlocks = new int[sizeX][sizeY][sizeZ];
 

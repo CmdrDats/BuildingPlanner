@@ -33,7 +33,9 @@ public class Config {
 	defaults.put("defaultHeight", 0);
 	defaults.put("floorColour", "RED");
 	defaults.put("gridColour", "WHITE");
-	defaults.put("liftFences", true);
+	defaults.put("liftFences", true); 
+	defaults.put("setSizeFromSign", true); 
+	defaults.put("floorInvincible", true);
 	/*
 	defaults.put("lang.createConfirm", "&EBuilt <name>!");
 	defaults.put("lang.destroyed", "&EDestroyed Memory Stone Structure!");
@@ -104,6 +106,14 @@ public class Config {
     
     public static boolean isFenceLiftEnabled() {
 	return conf.getBoolean("liftFences", true);
+    }
+
+    public static boolean isSetSizeFromSign() {
+	return conf.getBoolean("setSizeFromSign", true);
+    }
+
+    public static boolean isFloorInvincible() {
+	return conf.getBoolean("floorInvincible", true);;
     }
                                             
 }

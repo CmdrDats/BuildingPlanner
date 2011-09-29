@@ -10,9 +10,12 @@ ChangeLog
 v0.4.0
 	- Plans can now have names if you enter it in the 2nd line of the sign, and the height needs to be specified on the 3rd line.
 	- Items can no longer spawn in the planning areas, don't drop your items!
+	- Config option for invincible floor
+	- Config option for if you can specify size from sign setup.
 	- FIX: Plans now count beds and doors correctly.
 	- FIX: Attachable items got detached when plan was committed, it now removes attachable items first.
 	- FIX: Height of the area was purely the height of fences and not the calculation or sign value.
+	- FIX: Double step didn't place correctly from chest.
 
 v0.3.0
 	- Fixed a crippling performance issue with saving and loading the plan areas.

@@ -74,7 +74,7 @@ public class PlanAreaCreationListener extends BlockListener {
 	    return;
 	}
 
-	area.add(block);
+	area.add(block, true);
 
 	traverse(area, block.getRelative(BlockFace.EAST));
 	traverse(area, block.getRelative(BlockFace.WEST));
@@ -126,34 +126,30 @@ public class PlanAreaCreationListener extends BlockListener {
 	Block leftBlock = sign.getBlock().getRelative(left);
 	Block rightBlock = sign.getBlock().getRelative(right);
 
-	if (!(Material.FENCE.equals(leftBlock.getType()) && Material.FENCE.equals(rightBlock.getType()))) {
-	    event.setLine(1, BuildingPlanner.color("&CNeed fence to"));
-	    event.setLine(2, BuildingPlanner.color("&Cleft and right"));
-	    return;
-	}
-	traverse(area, leftBlock);
-
-	if (!area.fenceContains(rightBlock)) {
-	    event.setLine(1, BuildingPlanner.color("&CBoundaries not closed"));
-	    return;
-	}
-
-	int maxY = area.getMaxY();
-	try {
-	    maxY = area.getMinY() + Integer.parseInt(event.getLine(2));
-	} catch (NumberFormatException e) {
-	    if (Config.getDefaultHeight() != 0) {
-		maxY = Config.getDefaultHeight();
-	    } else {
-		// Add the middle amount between the z and x size as an extra y size
-		// Seems like a good height measure
-		int extra = area.getMaxX() - area.getMinX() + area.getMaxZ() - area.getMinZ();
-		maxY = area.getMaxY() + (extra / 2);
+	if (!setSizeFromLine(area, event.getLine(2), left, right, aSign.getFacing().getOppositeFace())) {
+	    if (!(Material.FENCE.equals(leftBlock.getType()) && Material.FENCE.equals(rightBlock.getType()))) {
+		event.setLine(1, BuildingPlanner.color("Need fence to"));
+		event.setLine(2, BuildingPlanner.color("left and right"));
+		return;
 	    }
+	    traverse(area, leftBlock);
+
+	    if (!area.fenceContains(rightBlock)) {
+		event.setLine(1, BuildingPlanner.color("&CBoundaries"));
+		event.setLine(2, BuildingPlanner.color("&Cnot closed"));
+		return;
+	    }
+
+	    int maxY = area.getMaxY();
+	    try {
+		maxY = area.getMinY() + Integer.parseInt(event.getLine(2));
+	    } catch (NumberFormatException e) {
+		maxY = getDefaultHeight(area);
+	    }
+
+	    area.setMaxY(maxY);
 	}
 
-	area.setMaxY(maxY);
-	
 	area.init();
 
 	event.setLine(2, BuildingPlanner.color("&EOK"));
@@ -161,6 +157,56 @@ public class PlanAreaCreationListener extends BlockListener {
 	for (PlanAreaListener listener : listeners) {
 	    listener.create(area);
 	}
+    }
+
+    private int getDefaultHeight(PlanArea area) {
+	int maxY;
+	if (Config.getDefaultHeight() != 0) {
+	    maxY = Config.getDefaultHeight();
+	} else {
+	    // Add the middle amount between the z and x size as an extra y size
+	    // Seems like a good height measure
+	    int extra = area.getMaxX() - area.getMinX() + area.getMaxZ() - area.getMinZ();
+	    maxY = area.getMaxY() + (extra / 2);
+	}
+	return maxY;
+    }
+
+    private boolean setSizeFromLine(PlanArea area, String line, BlockFace leftFace, BlockFace rightFace, BlockFace backFace) {
+	if (!Config.isSetSizeFromSign()) {
+	    return false;
+	}
+	String[] parts = line.split("x");
+	if (parts != null && parts.length >= 2) {
+	    try {
+		int sizeX = Integer.parseInt(parts[0].trim());
+		int sizeZ = Integer.parseInt(parts[1].trim());
+		int sizeY = (Config.getDefaultHeight() == 0) ? (sizeX + sizeZ)/2 : Config.getDefaultHeight();
+		
+		if (parts.length == 3) {
+		    sizeY = Integer.parseInt(parts[2].trim());
+		}
+		
+		int leftPart = sizeX/2;
+		int rightPart = sizeX-leftPart;
+		
+		Block supplyBlock = area.getSignBlock().getRelative(leftFace);
+		Block leftBlock = area.getSignBlock().getRelative(leftFace, leftPart);
+		Block rightBlock = area.getSignBlock().getRelative(rightFace, rightPart);
+		Block backBlock = area.getSignBlock().getRelative(backFace, sizeZ);
+		Block upBlock = area.getSignBlock().getRelative(BlockFace.UP, sizeY);
+		
+		area.add(supplyBlock, false);
+		area.add(leftBlock, false);
+		area.add(rightBlock, false);
+		area.add(backBlock, false);
+		area.add(upBlock, false);
+		return true;
+	    } catch (NumberFormatException e) {
+		return false;
+	    }
+	}
+	return false;
     }
 
     public void addListener(PlanAreaListener listener) {
