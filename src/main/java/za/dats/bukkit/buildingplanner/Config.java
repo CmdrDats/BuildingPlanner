@@ -113,7 +113,7 @@ public class Config {
     }
 
     public static boolean isFloorInvincible() {
-	return conf.getBoolean("floorInvincible", true);;
+	return conf.getBoolean("floorInvincible", true);
     }
                                             
 }

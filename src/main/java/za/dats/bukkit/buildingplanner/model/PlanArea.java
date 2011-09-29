@@ -295,6 +295,11 @@ public class PlanArea {
 		int xOffset = x - minX;
 		int zOffset = z - minZ;
 
+		Material material = BlockHelper.getMaterial(planBlocks[x-minX][0][z-minZ]);
+		if (material != Material.AIR) {
+		    continue;
+		}
+		
 		signBlock.getWorld().getBlockAt(x, minY, z).setType(Material.WOOL);
 		// Make white wool grid every 5 blocks.
 		if (xOffset % 5 != 0 && zOffset % 5 != 0) {
@@ -675,6 +680,8 @@ public class PlanArea {
 	    return blockMaterial.equals(Material.IRON_DOOR_BLOCK);
 	case BED:
 	    return blockMaterial.equals(Material.BED_BLOCK);
+	case CAKE:
+	    return blockMaterial.equals(Material.CAKE_BLOCK);
 	case SIGN:
 	    return blockMaterial.equals(Material.WALL_SIGN) || blockMaterial.equals(Material.SIGN_POST);
 	case WOOL:

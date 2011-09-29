@@ -8,6 +8,7 @@ import org.bukkit.event.block.BlockListener;
 import org.bukkit.event.block.SignChangeEvent;
 
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
+import za.dats.bukkit.buildingplanner.Config;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
 
 public class PlanAreaDestroyListener extends BlockListener {
@@ -25,7 +26,7 @@ public class PlanAreaDestroyListener extends BlockListener {
 	}
 	List<PlanArea> areas = new ArrayList<PlanArea>(planAreas);
 	for (PlanArea area : areas) {
-	    if (area.isFloorBlock(event.getBlock())) {
+	    if (Config.isFloorInvincible() && area.isFloorBlock(event.getBlock())) {
 		event.setCancelled(true);
 		return;
 	    }

@@ -34,6 +34,14 @@ public class PlayerAreaListener extends PlayerListener {
 	if (area == null) {
 	    return;
 	}
+	
+	if (event.getClickedBlock().getType().equals(Material.CAKE_BLOCK)) {
+	    if (!area.isCommitted() && area.isPlannedBlock(event.getClickedBlock())) {
+		event.setCancelled(true);
+		return;
+	    }
+	}
+	
 	if (area.getSignBlock() != event.getClickedBlock()) {
 	    return;
 	}

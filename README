@@ -7,6 +7,9 @@ Not only does it let you place infinite blocks, but when you make mistakes, a si
 
 ChangeLog
 ---------
+v0.5.0
+	- FIX: Cake block works properly. And you can't eat cake while it's a planned block (say no to infinite cake!)
+
 v0.4.0
 	- Plans can now have names if you enter it in the 2nd line of the sign, and the height needs to be specified on the 3rd line.
 	- Items can no longer spawn in the planning areas, don't drop your items!
