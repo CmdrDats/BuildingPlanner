@@ -592,6 +592,9 @@ public class PlanArea {
 	case IRON_DOOR_BLOCK:
 	    result = Material.IRON_DOOR.toString();
 	    break;
+	case DOUBLE_STEP:
+	    data = Material.STEP.getNewData(BlockHelper.getData(state));
+	    break;
 	case BED_BLOCK:
 	    result = Material.BED.toString();
 	    break;
@@ -630,6 +633,10 @@ public class PlanArea {
 		    count = new AtomicLong();
 		    counts.put(key, count);
 		}
+		if (BlockHelper.getMaterial(state).equals(Material.DOUBLE_STEP)) {
+		    count.incrementAndGet();
+		}
+		
 		count.incrementAndGet();
 
 		return true;
