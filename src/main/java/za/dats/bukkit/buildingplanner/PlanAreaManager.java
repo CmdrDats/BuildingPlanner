@@ -13,6 +13,7 @@ import za.dats.bukkit.buildingplanner.listeners.PlanAreaCreationListener;
 import za.dats.bukkit.buildingplanner.listeners.PlanAreaDestroyListener;
 import za.dats.bukkit.buildingplanner.listeners.PlanAreaListener;
 import za.dats.bukkit.buildingplanner.listeners.PlanAreaModificationListener;
+import za.dats.bukkit.buildingplanner.listeners.PlanEntityListener;
 import za.dats.bukkit.buildingplanner.listeners.PlanItemListener;
 import za.dats.bukkit.buildingplanner.listeners.PlayerAreaListener;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
@@ -42,9 +43,12 @@ public class PlanAreaManager implements PlanAreaListener {
 	PlayerAreaListener movementListener = new PlayerAreaListener();
 	BuildingPlanner.pm.registerEvent(Type.PLAYER_INTERACT, movementListener, Priority.Normal,
 		BuildingPlanner.plugin);
+	BuildingPlanner.pm.registerEvent(Type.ITEM_SPAWN, new PlanItemListener(), Priority.Normal,
+		BuildingPlanner.plugin);
 
-	BuildingPlanner.pm.registerEvent(Type.ITEM_SPAWN, new PlanItemListener(), Priority.Normal, BuildingPlanner.plugin);
-	
+	BuildingPlanner.pm.registerEvent(Type.ENTITY_DAMAGE, new PlanEntityListener(), Priority.Normal,
+		BuildingPlanner.plugin);
+
 	Thread supplyCheckThread = new Thread("PlanAreaSupplyThread") {
 	    @Override
 	    public void run() {
@@ -145,13 +149,13 @@ public class PlanAreaManager implements PlanAreaListener {
 	planAreas.remove(area);
 	area.deleteArea();
     }
-    
+
     public PlanArea getAffectedArea(Block block) {
 	for (PlanArea area : planAreas) {
 	    /*
-	    if (includeSignAndFence && (area.fenceContains(block) || block.equals(area.getSignBlock()))) {
-		return null;
-	    }*/
+	     * if (includeSignAndFence && (area.fenceContains(block) || block.equals(area.getSignBlock()))) { return
+	     * null; }
+	     */
 
 	    if (area.isInside(block)) {
 		return area;

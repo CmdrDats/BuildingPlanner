@@ -46,6 +46,12 @@ public class PlayerAreaListener extends PlayerListener {
 	    return;
 	}
 
+	if (area.isLocked()) {
+	    event.getPlayer().sendMessage("Area is locked: "+area.getLockReason());
+	    event.setCancelled(true);
+	    return;
+	}
+	
 	Date clickDate = new Date();
 	if (area.isCommitted()) {
 	    if (area.getCommitAttemptTime() != null

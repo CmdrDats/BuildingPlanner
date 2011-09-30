@@ -36,6 +36,9 @@ public class Config {
 	defaults.put("liftFences", true); 
 	defaults.put("setSizeFromSign", true); 
 	defaults.put("floorInvincible", true);
+	defaults.put("maxHeight", 64);
+	defaults.put("maxSize", 128);
+	defaults.put("protectedFromFalling", true);
 	/*
 	defaults.put("lang.createConfirm", "&EBuilt <name>!");
 	defaults.put("lang.destroyed", "&EDestroyed Memory Stone Structure!");
@@ -114,6 +117,18 @@ public class Config {
 
     public static boolean isFloorInvincible() {
 	return conf.getBoolean("floorInvincible", true);
+    }
+    
+    public static int getMaxHeight() {
+	return conf.getInt("maxHeight", 64);
+    }
+    
+    public static int getMaxSize() {
+	return conf.getInt("maxSize", 128);
+    }
+
+    public static boolean isProtectedFromFalling() {
+	return conf.getBoolean("protectedFromFalling", true);
     }
                                             
 }

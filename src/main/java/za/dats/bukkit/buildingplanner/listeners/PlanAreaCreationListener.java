@@ -150,6 +150,15 @@ public class PlanAreaCreationListener extends BlockListener {
 	    area.setMaxY(maxY);
 	}
 
+	if ((area.getMaxX() - area.getMinX() > Config.getMaxSize())
+		|| (area.getMaxZ() - area.getMinZ() > Config.getMaxSize())
+		|| (area.getMaxY() - area.getMinY() > Config.getMaxHeight())) {
+	    
+	    event.setLine(1, BuildingPlanner.color("&CArea too"));
+	    event.setLine(2, BuildingPlanner.color("&Clarge"));
+	    return;
+	}
+
 	area.init();
 
 	event.setLine(2, BuildingPlanner.color("&EOK"));
@@ -172,7 +181,8 @@ public class PlanAreaCreationListener extends BlockListener {
 	return maxY;
     }
 
-    private boolean setSizeFromLine(PlanArea area, String line, BlockFace leftFace, BlockFace rightFace, BlockFace backFace) {
+    private boolean setSizeFromLine(PlanArea area, String line, BlockFace leftFace, BlockFace rightFace,
+	    BlockFace backFace) {
 	if (!Config.isSetSizeFromSign()) {
 	    return false;
 	}
@@ -181,21 +191,24 @@ public class PlanAreaCreationListener extends BlockListener {
 	    try {
 		int sizeX = Integer.parseInt(parts[0].trim());
 		int sizeZ = Integer.parseInt(parts[1].trim());
-		int sizeY = (Config.getDefaultHeight() == 0) ? (sizeX + sizeZ)/2 : Config.getDefaultHeight();
-		
+		int sizeY = (Config.getDefaultHeight() == 0) ? (sizeX + sizeZ) / 2 : Config.getDefaultHeight();
+
 		if (parts.length == 3) {
 		    sizeY = Integer.parseInt(parts[2].trim());
 		}
-		
-		int leftPart = sizeX/2;
-		int rightPart = sizeX-leftPart;
-		
+
+		int leftPart = sizeX / 2;
+		int rightPart = sizeX - leftPart;
+
+		if (area.getSignBlock().getLocation().getBlockY()+sizeY > area.getSignBlock().getWorld().getMaxHeight()) {
+		    sizeY = area.getSignBlock().getWorld().getMaxHeight()-area.getSignBlock().getLocation().getBlockY()-1;
+		}
 		Block supplyBlock = area.getSignBlock().getRelative(leftFace);
 		Block leftBlock = area.getSignBlock().getRelative(leftFace, leftPart);
 		Block rightBlock = area.getSignBlock().getRelative(rightFace, rightPart);
 		Block backBlock = area.getSignBlock().getRelative(backFace, sizeZ);
 		Block upBlock = area.getSignBlock().getRelative(BlockFace.UP, sizeY);
-		
+
 		area.add(supplyBlock, false);
 		area.add(leftBlock, false);
 		area.add(rightBlock, false);

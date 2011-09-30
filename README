@@ -8,6 +8,11 @@ Not only does it let you place infinite blocks, but when you make mistakes, a si
 ChangeLog
 ---------
 v0.5.0
+	- Added config option to protect from falling damage: protectedFromFalling 
+	- Protect area & sign from modifications while setup/committing
+	- Plan setup and committing on separate thread
+	- Config options for maxHeight and maxSize
+	- When breaking non-plan blocks, allow item spawning (to fix up losing items if you die or throw them..)
 	- FIX: Make double slabs report properly as 2 slabs
 	- FIX: Cake block works properly. And you can't eat cake while it's a planned block (say no to infinite cake!)
 

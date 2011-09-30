@@ -30,6 +30,12 @@ public class PlanAreaModificationListener extends BlockListener {
 	if (!event.getPlayer().hasPermission("buildingplanner.use")) {
 	    return;
 	}
+	
+	if (area.isLocked()) {
+	    event.getPlayer().sendMessage("Area is locked: "+area.getLockReason());
+	    event.setCancelled(true);
+	    return;
+	}
 
 	if (area.isPlannedBlock(event.getBlock())) {
 	    BlockFace relativeDirection = null;
@@ -57,24 +63,6 @@ public class PlanAreaModificationListener extends BlockListener {
 	super.onBlockDamage(event);
     }
 
-    /*
-    @Override
-    public void onBlockPhysics(BlockPhysicsEvent event) {
-	PlanArea area = getAffectedArea(event.getBlock());
-	if (area == null) {
-	    return;
-	}
-
-	if (area.isPlannedBlock(event.getBlock())) {
-	    area.removePlannedBlock(event.getBlock(), true);
-	}
-	System.out.println("Cancelling physics: "+event.getBlock().getState().getData()+" - "+event.getEventName());
-	event.getBlock().setType(Material.AIR);
-	event.setCancelled(true);
-	super.onBlockPhysics(event);
-    }
-    */
-
     @Override
     public void onBlockBreak(BlockBreakEvent event) {
 	if (event.isCancelled()) {
@@ -99,6 +87,12 @@ public class PlanAreaModificationListener extends BlockListener {
 	    return;
 	}
 
+	if (area.isLocked()) {
+	    event.getPlayer().sendMessage("Area is locked: "+area.getLockReason());
+	    event.setCancelled(true);
+	    return;
+	}
+	
 	if (!area.isPlannedBlock(block)) {
 	    final BlockState state = block.getState();
 
@@ -133,6 +127,12 @@ public class PlanAreaModificationListener extends BlockListener {
 
 	if (!player.hasPermission("buildingplanner.use")) {
 	    player.sendMessage("You're not allowed to build in planning areas");
+	    event.setCancelled(true);
+	    return;
+	}
+
+	if (area.isLocked()) {
+	    event.getPlayer().sendMessage("Area is locked: "+area.getLockReason());
 	    event.setCancelled(true);
 	    return;
 	}

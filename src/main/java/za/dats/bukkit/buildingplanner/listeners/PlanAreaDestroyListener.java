@@ -38,12 +38,25 @@ public class PlanAreaDestroyListener extends BlockListener {
 		    return;
 		}
 		
-		BuildingPlanner.info("Destroying Plan");
-		area.restoreOriginalBlocks(false);
-		
-		for (PlanAreaListener listener : listeners) {
-		    listener.destroy(area);
+		if (area.isLocked()) {
+		    event.getPlayer().sendMessage("Area is locked: "+area.getLockReason());
+		    event.setCancelled(true);
+		    return;
 		}
+		
+		BuildingPlanner.info("Destroying Plan");
+		final PlanArea destroyArea = area;
+		Thread planDestroyThread = new Thread("Plan destroy thread") {
+		    public void run() {
+			destroyArea.destroyArea();
+			
+			for (PlanAreaListener listener : listeners) {
+			    listener.destroy(destroyArea);
+			}
+		    };
+		};
+		planDestroyThread.setDaemon(true);
+		planDestroyThread.start();
 		continue;
 	    }
 	}
