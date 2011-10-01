@@ -5,11 +5,15 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -29,9 +33,24 @@ import org.bukkit.util.config.ConfigurationNode;
 
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
 import za.dats.bukkit.buildingplanner.Config;
+import za.dats.bukkit.buildingplanner.model.PlanArea.OpType;
 
 public class PlanArea {
     private static final int THREAD_SLEEP_INTERVAL = 20;
+
+    public enum OpType {
+	CREATE("buildingplanner.create", false), DESTROY("buildingplanner.destroy", false), MODIFY(
+		"buildingplanner.use", true), COMMIT("buildingplanner.commit", false), UNCOMMIT(
+		"buildingplanner.uncommit", false), INVITE("buildingplanner.invite", false), GIVE("buildingplanner.give", false);
+
+	final String permissionValue;
+	final boolean allowCollaborators;
+
+	private OpType(String permissionValue, boolean allowCollaborators) {
+	    this.permissionValue = permissionValue;
+	    this.allowCollaborators = allowCollaborators;
+	}
+    }
 
     static class BlockHelper {
 	// Block format is 0xRRDDMMMM
@@ -107,6 +126,7 @@ public class PlanArea {
     int sizeX, sizeY, sizeZ;
 
     private HashSet<Block> fenceBlocks = new HashSet<Block>();
+    private List<String> collaborators = new ArrayList<String>();
 
     private int[][][] originalBlocks;
     private int[][][] planBlocks;
@@ -352,11 +372,8 @@ public class PlanArea {
 			});
 
 		/*
-		try {
-		    Thread.sleep(THREAD_SLEEP_INTERVAL);
-		} catch (InterruptedException e) {
-		}
-		*/
+		 * try { Thread.sleep(THREAD_SLEEP_INTERVAL); } catch (InterruptedException e) { }
+		 */
 
 	    }
 	}
@@ -435,19 +452,14 @@ public class PlanArea {
 		});
 
 	/*
-	try {
-	    Thread.sleep(THREAD_SLEEP_INTERVAL);
-	} catch (InterruptedException e) {
-	}
-	*/
+	 * try { Thread.sleep(THREAD_SLEEP_INTERVAL); } catch (InterruptedException e) { }
+	 */
 
 	return;
     }
 
     private void restoreBlockPlan(final int[][][] blockMap, final boolean ignoreSupplyChest, final boolean restoreAir) {
-	
-	
-	
+
 	// Overwrite attachables first.
 	AreaCycler removeAttachablesCycler = new AreaCycler() {
 	    public boolean cycle(final int x, final int y, final int z) {
@@ -625,13 +637,13 @@ public class PlanArea {
 	HashMap<String, AtomicLong> counts = getMaterialCount();
 
 	String planName = name == null ? "The plan" : name;
-	
+
 	if (counts.size() == 0) {
-	    player.sendMessage(planName+" has no required materials yet.");
+	    player.sendMessage(planName + " has no required materials yet.");
 	    return;
 	}
 
-	player.sendMessage(planName+" needs the following: ");
+	player.sendMessage(planName + " needs the following: ");
 	for (String item : counts.keySet()) {
 	    AtomicLong count = counts.get(item);
 	    player.sendMessage(" " + count + "x " + item);
@@ -903,6 +915,12 @@ public class PlanArea {
 	owner = config.getString("owner", "");
 	committed = config.getBoolean("committed", false);
 	boolean newFormat = config.getBoolean("newFormat", false);
+	List<Object> collab = config.getList("collaborators");
+	if (collab != null) {
+	    for (Object colName : collab) {
+		collaborators.add(colName.toString());
+	    }
+	}
 	Location signLocation = OldReader.stringToLocation(config.getString("signLocation", ""));
 	signBlock = signLocation.getBlock();
 
@@ -993,29 +1011,20 @@ public class PlanArea {
 	if ((!dirty) || lastChange == null) {
 	    return;
 	}
+	
 
 	Date now = new Date();
 	if (now.getTime() - lastChange.getTime() < 5000) {
 	    return;
 	}
-	dirty = false;
-	BuildingPlanner.info("Saving area.");
-	Configuration area = new Configuration(getAreaDescriptorFile());
-	area.setProperty("name", name);
-	area.setProperty("owner", owner);
-	area.setProperty("committed", committed);
-	area.setProperty("newFormat", true);
-	area.setProperty("signLocation", OldReader.locationToString(signBlock.getLocation()));
-	area.setProperty("supplyLocation", OldReader.locationToString(supplyBlock.getLocation()));
-	area.setProperty("minLocation",
-		OldReader.locationToString(new Location(signBlock.getWorld(), minX, minY, minZ)));
-	area.setProperty("maxLocation",
-		OldReader.locationToString(new Location(signBlock.getWorld(), maxX, maxY, maxZ)));
-
-	int fenceCount = 0;
-	for (Block fence : fenceBlocks) {
-	    area.setProperty("fenceBlock." + fenceCount, OldReader.locationToString(fence.getLocation()));
+	
+	if (locked) {
+	    BuildingPlanner.info("Area "+name+" Locked: "+lockReason+" will save when unlocked..");
+	    return;
 	}
+	dirty = false;
+	BuildingPlanner.info("Saving area: "+getAreaName());
+	saveProps();
 
 	try {
 	    File areaData = getAreaDataFile();
@@ -1042,30 +1051,110 @@ public class PlanArea {
 	} catch (Exception e) {
 	    e.printStackTrace();
 	}
+    }
 
+    private void saveProps() {
+	Configuration area = new Configuration(getAreaDescriptorFile());
+	area.setProperty("name", name);
+	area.setProperty("owner", owner);
+	area.setProperty("committed", committed);
+	area.setProperty("newFormat", true);
+	area.setProperty("signLocation", OldReader.locationToString(signBlock.getLocation()));
+	area.setProperty("supplyLocation", OldReader.locationToString(supplyBlock.getLocation()));
+	area.setProperty("minLocation",
+		OldReader.locationToString(new Location(signBlock.getWorld(), minX, minY, minZ)));
+	area.setProperty("maxLocation",
+		OldReader.locationToString(new Location(signBlock.getWorld(), maxX, maxY, maxZ)));
+
+	int fenceCount = 0;
+	for (Block fence : fenceBlocks) {
+	    area.setProperty("fenceBlock." + fenceCount, OldReader.locationToString(fence.getLocation()));
+	}
+
+	area.setProperty("collaborators", collaborators);
 	area.save();
-
     }
 
     public String getAreaName() {
 	StringBuilder result = new StringBuilder();
-	
+
 	if (name != null && name.length() > 0) {
 	    result.append(name);
 	} else {
-	    result.append("Unnamed: "+sizeX+"x"+sizeZ+"x"+sizeY+" area");
+	    result.append("Unnamed: " + sizeX + "x" + sizeZ + "x" + sizeY + " area");
 	}
-	
+
 	result.append(committed ? ", committed" : ", planning");
-	
+
 	if (owner != null && owner.length() > 0) {
-	    result.append(", owned by "+owner);
+	    result.append(", owned by " + owner);
 	} else {
 	    result.append(", unowned");
 	}
-	
-	result.append(", at x:"+signBlock.getX()+", z:"+signBlock.getZ()+", y:"+signBlock.getY());
-	
+
+	result.append(", at x:" + signBlock.getX() + ", z:" + signBlock.getZ() + ", y:" + signBlock.getY());
+
 	return result.toString();
+    }
+
+    public boolean checkPermission(Player player, OpType op) {
+	return checkPermission(player, op, false);
+    }
+
+    public List<String> getCollaborators() {
+	return Collections.unmodifiableList(collaborators);
+    }
+
+    public void addCollaborator(String name) {
+	if (collaborators.contains(name)) {
+	    return;
+	}
+
+	collaborators.add(name);
+	saveProps();
+    }
+
+    public void removeCollaborator(String name) {
+	collaborators.remove(name);
+	saveProps();
+    }
+
+    public boolean checkPermission(Player player, OpType op, boolean silent) {
+	if (!player.hasPermission(op.permissionValue)) {
+	    if (!silent) {
+		player.sendMessage("You do not have permission to " + op.toString().toLowerCase() + " a planning area");
+	    }
+	    return false;
+	}
+
+	if (!player.hasPermission("buildingplanner.anyarea") && Config.isOwnerEditOnly()) {
+	    if (owner == null) {
+		return true;
+	    }
+
+	    if (owner.equals(player.getName())) {
+		return true;
+	    }
+
+	    if (op.allowCollaborators && collaborators.contains(player.getName())) {
+		return true;
+	    }
+
+	    if (!silent) {
+		if (op.allowCollaborators) {
+		    player.sendMessage("You are not an owner or collaborator for the area");
+		} else {
+		    player.sendMessage("You are not an owner for the area");
+		}
+	    }
+	    return false;
+	}
+
+	return true;
+    }
+
+    public void changeOwner(String newOwner) {
+	setOwner(newOwner);
+	saveProps();
     }
 }

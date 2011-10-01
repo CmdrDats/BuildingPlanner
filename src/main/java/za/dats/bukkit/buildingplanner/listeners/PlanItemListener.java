@@ -23,6 +23,7 @@ public class PlanItemListener extends EntityListener {
 	    return;
 	}
 	
+	
 	// Disable all item spawns in plan blocks
 	event.setCancelled(true);
 	//System.out.println("Spawning item: "+event.getType());

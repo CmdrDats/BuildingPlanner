@@ -8,10 +8,13 @@ Not only does it let you place infinite blocks, but when you make mistakes, a si
 ChangeLog
 ---------
 v0.5.0
+	- Added /plan uninvite PlayerName [areaname] to uninvite collaborator
+	- Added /plan invite PlayerName [areaname] to invite collaborator (owners and buildingplanner.anyarea only can do this)
+	- Added /plan give option to transfer ownership
+	- Added config option to allow only owners to edit their plans
 	- Added /plan list, /plan report [areaname] and /plan send player [areaname] commands
 	- FIX: Issue with default height if specified from configuration
 	- FIX: defaultHeight will now correctly pick from the default height or the height of the fence, whichever is higher.
-	
 	- Added config option to protect from falling damage: protectedFromFalling 
 	- Protect area & sign from modifications while setup/committing
 	- Plan setup and committing on separate thread
@@ -53,3 +56,9 @@ Credits
 Mojang
 The Bukkit team
 The Spout team
+
+Special thanks to everyone who took the time to give me feedback and posted issues on the github projects:
+
+fabiozaza, rtatum, TheShadowDraco, IronPython, Mentioum, caidcurse, 
+
+New BuildingPlanner dev build up, 0.4.3 http://dev.bukkit.org/server-mods/buildingplanner/ https://github.com/downloads/CmdrDats/BuildingPlanner/BuildingPlanner-0.4.3.jar #build

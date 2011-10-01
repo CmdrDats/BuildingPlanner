@@ -18,16 +18,22 @@ import org.bukkit.material.Door;
 
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
+import za.dats.bukkit.buildingplanner.model.PlanArea.OpType;
 
 public class PlanAreaModificationListener extends BlockListener {
     @Override
     public void onBlockDamage(BlockDamageEvent event) {
+	if (event.isCancelled()) {
+	    return;
+	}
+	
 	PlanArea area = BuildingPlanner.plugin.areaManager.getAffectedArea(event.getBlock());
 	if (area == null) {
 	    return;
 	}
 
-	if (!event.getPlayer().hasPermission("buildingplanner.use")) {
+	if (!area.checkPermission(event.getPlayer(), OpType.MODIFY)) {
+	    event.setCancelled(true);
 	    return;
 	}
 	
@@ -75,15 +81,8 @@ public class PlanAreaModificationListener extends BlockListener {
 	    return;
 	}
 
-	if (!event.getPlayer().hasPermission("buildingplanner.use")) {
-	    event.getPlayer().sendMessage("You're not allowed to modify planning areas");
+	if (!area.checkPermission(event.getPlayer(), OpType.MODIFY)) {
 	    event.setCancelled(true);
-	    return;
-	}
-
-	if (block == area.getSupplyBlock()) {
-	    event.setCancelled(true);
-	    event.getPlayer().sendMessage("This is the supply chest for plan, to get rid of it, break the plan sign");
 	    return;
 	}
 
@@ -92,6 +91,13 @@ public class PlanAreaModificationListener extends BlockListener {
 	    event.setCancelled(true);
 	    return;
 	}
+	
+	if (block == area.getSupplyBlock()) {
+	    event.setCancelled(true);
+	    event.getPlayer().sendMessage("This is the supply chest for plan, to get rid of it, break the plan sign");
+	    return;
+	}
+
 	
 	if (!area.isPlannedBlock(block)) {
 	    final BlockState state = block.getState();
@@ -125,8 +131,7 @@ public class PlanAreaModificationListener extends BlockListener {
 	    return;
 	}
 
-	if (!player.hasPermission("buildingplanner.use")) {
-	    player.sendMessage("You're not allowed to build in planning areas");
+	if (!area.checkPermission(event.getPlayer(), OpType.MODIFY)) {
 	    event.setCancelled(true);
 	    return;
 	}

@@ -22,6 +22,7 @@ import org.bukkit.inventory.ItemStack;
 
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
+import za.dats.bukkit.buildingplanner.model.PlanArea.OpType;
 
 public class PlayerAreaListener extends PlayerListener {
     @Override
@@ -64,7 +65,7 @@ public class PlayerAreaListener extends PlayerListener {
 	    }
 
 	    area.reportPlan(event.getPlayer());
-	    if (event.getPlayer().hasPermission("buildingplanner.uncommit")) {
+	    if (area.checkPermission(event.getPlayer(), OpType.UNCOMMIT, true)) {
 		area.setCommitAttemptTime(clickDate);
 		area.setCommitPlayer(event.getPlayer());
 		event.getPlayer().sendMessage("To view this plan, right click the sign again within 5 seconds.");
@@ -83,7 +84,7 @@ public class PlayerAreaListener extends PlayerListener {
 
 	area.reportPlan(event.getPlayer());
 
-	if (event.getPlayer().hasPermission("buildingplanner.commit")) {
+	if (area.checkPermission(event.getPlayer(), OpType.COMMIT, true)) {
 	    area.setCommitAttemptTime(clickDate);
 	    area.setCommitPlayer(event.getPlayer());
 	    event.getPlayer().sendMessage("To commit this plan, right click the sign again within 5 seconds.");

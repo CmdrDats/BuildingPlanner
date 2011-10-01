@@ -13,6 +13,7 @@ import org.bukkit.inventory.ItemStack;
 
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
+import za.dats.bukkit.buildingplanner.model.PlanArea.OpType;
 
 public class PlanPluginCommand implements CommandExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -34,6 +35,21 @@ public class PlanPluginCommand implements CommandExecutor {
 		return true;
 	    }
 
+	    if ("invite".equals(args[0])) {
+		invite(player, args);
+		return true;
+	    }
+	    
+	    if ("uninvite".equals(args[0])) {
+		uninvite(player, args);
+		return true;
+	    }
+	    
+	    if ("give".equals(args[0])) {
+		give(player, args);
+		return true;
+	    }
+	    
 	    if ("clear".equals(args[0])) {
 		ItemStack[] contents = player.getInventory().getContents();
 		for (int i = 0; i < contents.length; i++) {
@@ -44,6 +60,116 @@ public class PlanPluginCommand implements CommandExecutor {
 	return true;
     }
 
+    private void give(Player player, String[] args) {
+	if (!player.hasPermission("buildingplanner.give")) {
+	    player.sendMessage("You do not have permission to give plan areas");
+	    return;
+	}
+	
+	if (args.length < 2) {
+	    player.sendMessage("You need to specify a player to give to");
+	    return;
+	}
+	Player recipient = BuildingPlanner.plugin.getServer().getPlayer(args[1]);
+	
+	PlanArea area = null;
+	if (args.length > 2) {
+	    String areaName = null;
+	    areaName = args[2];
+	    area = BuildingPlanner.plugin.areaManager.getAreaByName(areaName);
+	}
+
+	if (area == null) {
+	    area = BuildingPlanner.plugin.areaManager.getAffectedArea(player.getLocation().getBlock());
+	}
+	
+	if (area == null) {
+	    player.sendMessage("You need to be in an area or specify an area by name to give to a player");
+	    return;
+	}
+	
+	if (!area.checkPermission(player, OpType.GIVE, true)) {
+	    player.sendMessage("You do not have permission to give plan areas");
+	    return;
+	}
+	
+	area.changeOwner(recipient.getName());
+	player.sendMessage("You have given "+player.getName()+" ownership of the area: "+area.getAreaName());
+	recipient.sendMessage(player.getName()+" has given you ownership of the area: "+area.getAreaName());
+    }
+
+    private void invite(Player player, String[] args) {
+	if (!player.hasPermission("buildingplanner.invite")) {
+	    player.sendMessage("You do not have permission to invite collaborators");
+	    return;
+	}
+	
+	if (args.length < 2) {
+	    player.sendMessage("You need to specify a player to invite");
+	    return;
+	}
+	Player recipient = BuildingPlanner.plugin.getServer().getPlayer(args[1]);
+	
+	PlanArea area = null;
+	if (args.length > 2) {
+	    String areaName = null;
+	    areaName = args[2];
+	    area = BuildingPlanner.plugin.areaManager.getAreaByName(areaName);
+	}
+
+	if (area == null) {
+	    area = BuildingPlanner.plugin.areaManager.getAffectedArea(player.getLocation().getBlock());
+	}
+	
+	if (area == null) {
+	    player.sendMessage("You need to be in an area or specify an area by name to invite a player");
+	    return;
+	}
+	
+	if (!area.checkPermission(player, OpType.INVITE, true)) {
+	    player.sendMessage("You do not have permission to invite collaborators");
+	    return;
+	}
+	
+	player.sendMessage("You have added "+player.getName()+" as a collaborator for the area: "+area.getAreaName());
+	recipient.sendMessage(player.getName()+" has added you as a collaborator for the area: "+area.getAreaName());
+	area.addCollaborator(recipient.getName());
+    }
+
+    private void uninvite(Player player, String[] args) {
+	if (args.length < 2) {
+	    player.sendMessage("You need to specify a player to uninvite");
+	    return;
+	}
+	Player recipient = BuildingPlanner.plugin.getServer().getPlayer(args[1]);
+	
+	PlanArea area = null;
+	if (args.length > 2) {
+	    String areaName = null;
+	    areaName = args[2];
+	    area = BuildingPlanner.plugin.areaManager.getAreaByName(areaName);
+	}
+
+	if (area == null) {
+	    area = BuildingPlanner.plugin.areaManager.getAffectedArea(player.getLocation().getBlock());
+	}
+	
+	if (area == null) {
+	    player.sendMessage("You need to be in an area or specify an area by name to uninvite a player");
+	    return;
+	}
+	
+	if (!area.checkPermission(player, OpType.INVITE, true)) {
+	    player.sendMessage("You do not have permission to uninvite collaborators");
+	    return;
+	}
+	
+	player.sendMessage("You have removed "+player.getName()+" as a collaborator for the area: "+area.getAreaName());
+	recipient.sendMessage(player.getName()+" has removed you as a collaborator for the area: "+area.getAreaName());
+	area.removeCollaborator(recipient.getName());
+    }
+    
+    
     private void sendReport(Player player, String[] args) {
 	if (!player.hasPermission("buildingplanner.send")) {
 	    player.sendMessage("You do not have permission to use plan areas");
@@ -69,10 +195,11 @@ public class PlanPluginCommand implements CommandExecutor {
 	}
 	
 	if (area == null) {
-	    player.sendMessage("You need to be in an area or specify an area by name to get send a report");
+	    player.sendMessage("You need to be in an area or specify an area by name to send a report");
 	    return;
 	}
 	
+	player.sendMessage("You have sent "+recipient.getName()+" an area report");
 	recipient.sendMessage(player.getName()+" has sent you a plan area report:");
 	area.reportPlan(recipient);
 

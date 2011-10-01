@@ -39,6 +39,7 @@ public class Config {
 	defaults.put("maxHeight", 64);
 	defaults.put("maxSize", 128);
 	defaults.put("protectedFromFalling", true);
+	defaults.put("ownerEditOnly", true);
 	/*
 	defaults.put("lang.createConfirm", "&EBuilt <name>!");
 	defaults.put("lang.destroyed", "&EDestroyed Memory Stone Structure!");
@@ -129,6 +130,10 @@ public class Config {
 
     public static boolean isProtectedFromFalling() {
 	return conf.getBoolean("protectedFromFalling", true);
+    }
+
+    public static boolean isOwnerEditOnly() {
+	return conf.getBoolean("ownerEditOnly", true);
     }
                                             
 }

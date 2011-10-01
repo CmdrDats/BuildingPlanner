@@ -8,6 +8,7 @@ import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
 import za.dats.bukkit.buildingplanner.Config;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
+import za.dats.bukkit.buildingplanner.model.PlanArea.OpType;
 
 public class PlanEntityListener extends EntityListener {
     @Override
@@ -18,6 +19,7 @@ public class PlanEntityListener extends EntityListener {
 	if (!(event.getEntity() instanceof Player)) {
 	    return;
 	}
+	Player player = (Player) event.getEntity();
 
 	if (!event.getCause().equals(DamageCause.FALL)) {
 	    return;
@@ -29,6 +31,11 @@ public class PlanEntityListener extends EntityListener {
 	}
 
 	if (area.isCommitted()) {
+	    return;
+	}
+	
+	if (!area.checkPermission(player, OpType.MODIFY)) {
+	    event.setCancelled(true);
 	    return;
 	}
 

@@ -10,6 +10,7 @@ import org.bukkit.event.block.SignChangeEvent;
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
 import za.dats.bukkit.buildingplanner.Config;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
+import za.dats.bukkit.buildingplanner.model.PlanArea.OpType;
 
 public class PlanAreaDestroyListener extends BlockListener {
     ArrayList<PlanAreaListener> listeners = new ArrayList<PlanAreaListener>();
@@ -32,8 +33,7 @@ public class PlanAreaDestroyListener extends BlockListener {
 	    }
 	    
 	    if (area.fenceContains(event.getBlock()) || event.getBlock().equals(area.getSignBlock())) {
-		if (!event.getPlayer().hasPermission("buildingplanner.destroy")) {
-		    event.getPlayer().sendMessage("You do not have permission to destroy a planning area");
+		if (!area.checkPermission(event.getPlayer(), OpType.DESTROY)) {
 		    event.setCancelled(true);
 		    return;
 		}

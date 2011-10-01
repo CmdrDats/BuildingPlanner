@@ -11,7 +11,7 @@ main: za.dats.bukkit.buildingplanner.BuildingPlanner
 name: BuildingPlanner
 startup: postworld
 url: https://github.com/CmdrDats/BuildingPlanner
-version: '0.4.3'
+version: '0.4.4'
 commands:
   plan:
     aliases: [plancommand]
@@ -20,6 +20,9 @@ commands:
       Usage: /<command> version
       Usage: /<command> version playername
 permissions:
+  buildingplanner.anyarea:
+    description: Allowed to destroy/commit/uncommit/modify any area (even if not owner or collaborator)
+    default: op
   buildingplanner.create:
     description: Allows player to define a building area
     default: true
@@ -44,3 +47,9 @@ permissions:
   buildingplanner.send:
     description: Allow a player to send a report on area building materials with /plan send command
     default: true    
+  buildingplanner.invite:
+    description: Allow a player to invite collaborators to their plan
+    default: true       
+  buildingplanner.give:
+    description: Allow a player to give away their plan areas.
+    default: true             
