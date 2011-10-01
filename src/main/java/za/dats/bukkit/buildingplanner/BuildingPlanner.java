@@ -6,7 +6,7 @@ import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import za.dats.bukkit.buildingplanner.commands.GivePluginCommand;
+import za.dats.bukkit.buildingplanner.commands.PlanPluginCommand;
 
 public class BuildingPlanner extends JavaPlugin {
     public static BuildingPlanner plugin;
@@ -40,7 +40,7 @@ public class BuildingPlanner extends JavaPlugin {
 	    info(pdf.getName() + " version " + pdf.getVersion() + " is DISABLED by configuration.");
 	    return;
 	}
-	getCommand("plan").setExecutor(new GivePluginCommand());
+	getCommand("plan").setExecutor(new PlanPluginCommand());
 
 	pm = getServer().getPluginManager();
 	pdf = getDescription();

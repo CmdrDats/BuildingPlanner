@@ -11,7 +11,7 @@ main: za.dats.bukkit.buildingplanner.BuildingPlanner
 name: BuildingPlanner
 startup: postworld
 url: https://github.com/CmdrDats/BuildingPlanner
-version: '0.4.2'
+version: '0.4.3'
 commands:
   plan:
     aliases: [plancommand]
@@ -35,3 +35,12 @@ permissions:
   buildingplanner.uncommit:
     description: Allows player to uncommit planning areas
     default: true
+  buildingplanner.list:
+    description: Allow a player to list all areas
+    default: op
+  buildingplanner.report:
+    description: Allow a player to report on area building materials with /plan report command
+    default: true
+  buildingplanner.send:
+    description: Allow a player to send a report on area building materials with /plan send command
+    default: true    

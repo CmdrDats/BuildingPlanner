@@ -3,6 +3,8 @@ package za.dats.bukkit.buildingplanner;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 import org.bukkit.block.Block;
@@ -163,5 +165,18 @@ public class PlanAreaManager implements PlanAreaListener {
 	}
 
 	return null;
+    }
+
+    public PlanArea getAreaByName(String areaName) {
+	for (PlanArea area : planAreas) {
+	    if (areaName.equals(area.getName())) {
+		return area;
+	    }
+	}
+	return null;
+    }
+
+    public List<PlanArea> getPlanList() {
+	return Collections.unmodifiableList(planAreas);
     }
 }

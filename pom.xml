@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>me.cmdrdats.plugins.buildingplanner</groupId>
     <artifactId>BuildingPlanner</artifactId>
-    <version>0.4.2</version>
+    <version>0.4.3</version>
     <name>BuildingPlanner</name>
     <url>https://github.com/CmdrDats/BuildingPlanner</url>
     <repositories>
@@ -12,6 +12,7 @@
         </repository>
     </repositories>
     <build>
+    	<!-- <finalName>${project.artifactId}</finalName> -->
     	<finalName>${project.artifactId}-${project.version}</finalName>
         <plugins>
             <plugin>

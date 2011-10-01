@@ -624,12 +624,14 @@ public class PlanArea {
     public void reportPlan(Player player) {
 	HashMap<String, AtomicLong> counts = getMaterialCount();
 
+	String planName = name == null ? "The plan" : name;
+	
 	if (counts.size() == 0) {
-	    player.sendMessage("This plan has no required materials yet.");
+	    player.sendMessage(planName+" has no required materials yet.");
 	    return;
 	}
 
-	player.sendMessage("This plan needs the following: ");
+	player.sendMessage(planName+" needs the following: ");
 	for (String item : counts.keySet()) {
 	    AtomicLong count = counts.get(item);
 	    player.sendMessage(" " + count + "x " + item);
@@ -1043,5 +1045,27 @@ public class PlanArea {
 
 	area.save();
 
+    }
+
+    public String getAreaName() {
+	StringBuilder result = new StringBuilder();
+	
+	if (name != null && name.length() > 0) {
+	    result.append(name);
+	} else {
+	    result.append("Unnamed: "+sizeX+"x"+sizeZ+"x"+sizeY+" area");
+	}
+	
+	result.append(committed ? ", committed" : ", planning");
+	
+	if (owner != null && owner.length() > 0) {
+	    result.append(", owned by "+owner);
+	} else {
+	    result.append(", unowned");
+	}
+	
+	result.append(", at x:"+signBlock.getX()+", z:"+signBlock.getZ()+", y:"+signBlock.getY());
+	
+	return result.toString();
     }
 }

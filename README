@@ -8,6 +8,10 @@ Not only does it let you place infinite blocks, but when you make mistakes, a si
 ChangeLog
 ---------
 v0.5.0
+	- Added /plan list, /plan report [areaname] and /plan send player [areaname] commands
+	- FIX: Issue with default height if specified from configuration
+	- FIX: defaultHeight will now correctly pick from the default height or the height of the fence, whichever is higher.
+	
 	- Added config option to protect from falling damage: protectedFromFalling 
 	- Protect area & sign from modifications while setup/committing
 	- Plan setup and committing on separate thread
