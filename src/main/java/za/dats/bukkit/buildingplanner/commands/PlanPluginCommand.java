@@ -71,6 +71,10 @@ public class PlanPluginCommand implements CommandExecutor {
 	    return;
 	}
 	Player recipient = BuildingPlanner.plugin.getServer().getPlayer(args[1]);
+	if (recipient == null) {
+	    player.sendMessage(args[1]+" needs to be online.");
+	    return;
+	}
 	
 	PlanArea area = null;
 	if (args.length > 2) {
@@ -109,6 +113,10 @@ public class PlanPluginCommand implements CommandExecutor {
 	    return;
 	}
 	Player recipient = BuildingPlanner.plugin.getServer().getPlayer(args[1]);
+	if (recipient == null) {
+	    player.sendMessage(args[1]+" needs to be online.");
+	    return;
+	}
 	
 	PlanArea area = null;
 	if (args.length > 2) {
@@ -142,6 +150,10 @@ public class PlanPluginCommand implements CommandExecutor {
 	    return;
 	}
 	Player recipient = BuildingPlanner.plugin.getServer().getPlayer(args[1]);
+	if (recipient == null) {
+	    player.sendMessage(args[1]+" needs to be online.");
+	    return;
+	}
 	
 	PlanArea area = null;
 	if (args.length > 2) {
@@ -182,6 +194,10 @@ public class PlanPluginCommand implements CommandExecutor {
 	}
 	
 	Player recipient = BuildingPlanner.plugin.getServer().getPlayer(args[1]);
+	if (recipient == null) {
+	    player.sendMessage(args[1]+" needs to be online.");
+	    return;
+	}
 	
 	PlanArea area = null;
 	if (args.length > 2) {
