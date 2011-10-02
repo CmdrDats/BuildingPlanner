@@ -78,6 +78,7 @@ public class PlanArea {
 
     private Date lastChange;
     volatile boolean dirty;
+    private volatile boolean destroyed;
 
     public String getName() {
 	return name;
@@ -414,6 +415,7 @@ public class PlanArea {
 	lock("Destroying plan area");
 	restoreBlockPlan(originalBlocks, false, true);
 	committed = true;
+	destroyed = true;
 	deleteArea();
 	unlock();
     }
@@ -938,6 +940,9 @@ public class PlanArea {
 	    return;
 	}
 
+	if (destroyed) {
+	    BuildingPlanner.info("Area destroyed. No point in saving");
+	}
 	if (locked) {
 	    BuildingPlanner.info("Area " + name + " Locked: " + lockReason + " will save when unlocked..");
 	    return;
