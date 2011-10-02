@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
@@ -32,6 +33,7 @@ import org.bukkit.util.config.Configuration;
 import org.bukkit.util.config.ConfigurationNode;
 
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
+import za.dats.bukkit.buildingplanner.ChangeScheduler;
 import za.dats.bukkit.buildingplanner.Config;
 import za.dats.bukkit.buildingplanner.model.PlanArea.OpType;
 
@@ -41,7 +43,8 @@ public class PlanArea {
     public enum OpType {
 	CREATE("buildingplanner.create", false), DESTROY("buildingplanner.destroy", false), MODIFY(
 		"buildingplanner.use", true), COMMIT("buildingplanner.commit", false), UNCOMMIT(
-		"buildingplanner.uncommit", false), INVITE("buildingplanner.invite", false), GIVE("buildingplanner.give", false);
+		"buildingplanner.uncommit", false), INVITE("buildingplanner.invite", false), GIVE(
+		"buildingplanner.give", false);
 
 	final String permissionValue;
 	final boolean allowCollaborators;
@@ -49,70 +52,6 @@ public class PlanArea {
 	private OpType(String permissionValue, boolean allowCollaborators) {
 	    this.permissionValue = permissionValue;
 	    this.allowCollaborators = allowCollaborators;
-	}
-    }
-
-    static class BlockHelper {
-	// Block format is 0xRRDDMMMM
-	// Where R = reserved, D = data, M = material ID
-	static int getState(Material material, byte data) {
-	    int result = material.getId() & 0xFFFF;
-	    result += data << 16;
-	    return result;
-	}
-
-	static Material getMaterial(int state) {
-	    short matType = (short) (state & 0xFFFF);
-	    return Material.getMaterial(matType);
-	}
-
-	static byte getData(int state) {
-	    byte data = (byte) (state >> 16 & 0xFF);
-	    return data;
-	}
-
-	public static int getSate(BlockState state) {
-	    return getState(state.getType(), state.getRawData());
-	}
-
-	public static boolean isAttachable(int state) {
-	    short matType = (short) (state & 0xFFFF);
-	    if (matType == 50
-		    || // Torch
-		    matType == 75
-		    || matType == 76
-		    || // Redstone torch
-		    matType == 55
-		    || // Redstone wire
-		    matType == 63
-		    || // Sign Post
-		    matType == 64
-		    || matType == 71
-		    || // Doors
-		    matType == 66 || matType == 68
-		    || matType == 6
-		    || // Sapling
-		    matType == 27 || matType == 28
-		    || matType == 66
-		    || // Rails
-		    matType == 30 || matType == 31
-		    || matType == 32
-		    || // Cobwebs, grass
-		    matType == 37 || matType == 38 || matType == 39 || matType == 40 || matType == 59 || matType == 65
-		    || matType == 70 || matType == 72 || matType == 77 || matType == 83 || matType == 93
-		    || matType == 94 || matType == 96) {
-		return true;
-	    }
-	    return false;
-	}
-
-	public static MaterialData getMaterialData(int state) {
-	    MaterialData newData = getMaterial(state).getNewData(getData(state));
-	    return newData;
-	}
-
-	public static boolean isAir(int state) {
-	    return (state & 0xFFFF) == 0;
 	}
     }
 
@@ -343,40 +282,34 @@ public class PlanArea {
     }
 
     private void placeBottomZone() {
+	ChangeScheduler scheduler = new ChangeScheduler();
+	World world = signBlock.getWorld();
+	int floorState = BlockHelper.getState(Material.WOOL, (byte) Config.getFloorColour().getData());
+	int gridState = BlockHelper.getState(Material.WOOL, (byte) Config.getGridColour().getData());
+
 	for (int x = minX; x <= maxX; x++) {
 	    for (int z = minZ; z <= maxZ; z++) {
 		final int xOffset = x - minX;
 		final int zOffset = z - minZ;
 
-		Material material = BlockHelper.getMaterial(planBlocks[x - minX][0][z - minZ]);
+		int planState = planBlocks[x - minX][0][z - minZ];
+		Material material = BlockHelper.getMaterial(planState);
 		if (material != Material.AIR) {
 		    continue;
 		}
 
-		final int fx = x;
-		final int fz = z;
-		BuildingPlanner.plugin.getServer().getScheduler()
-			.scheduleAsyncDelayedTask(BuildingPlanner.plugin, new Runnable() {
-			    public void run() {
-				signBlock.getWorld().getBlockAt(fx, minY, fz).setType(Material.WOOL);
+		int state = floorState;
+		if (xOffset % 5 != 0 && zOffset % 5 != 0) {
+		    state = floorState;
+		} else {
+		    state = gridState;
+		}
 
-				// Make white wool grid every 5 blocks.
-				if (xOffset % 5 != 0 && zOffset % 5 != 0) {
-				    signBlock.getWorld().getBlockAt(fx, minY, fz)
-					    .setData((byte) Config.getFloorColour().getData());
-				} else {
-				    signBlock.getWorld().getBlockAt(fx, minY, fz)
-					    .setData((byte) Config.getGridColour().getData());
-				}
-			    }
-			});
-
-		/*
-		 * try { Thread.sleep(THREAD_SLEEP_INTERVAL); } catch (InterruptedException e) { }
-		 */
-
+		scheduler.scheduleChange(world, x, minY, z, state);
 	    }
 	}
+
+	scheduler.commit();
 
     }
 
@@ -399,11 +332,12 @@ public class PlanArea {
 	}
     }
 
-    private void restoreBlock(final int[][][] blockMap, final int x, final int y, final int z,
-	    boolean ignoreSupplyChest, boolean restoreAir, int mode) {
+    private void restoreBlock(ChangeScheduler scheduler, final int[][][] blockMap, final int x, final int y,
+	    final int z, boolean ignoreSupplyChest, boolean restoreAir, int mode) {
 	if (ignoreSupplyChest) {
-	    if (supplyBlock.getLocation().getBlockX() == x + minX && supplyBlock.getLocation().getBlockY() == y + minY
-		    && supplyBlock.getLocation().getBlockZ() == z + minZ) {
+	    Location supplyLocation = supplyBlock.getLocation();
+	    if (supplyLocation.getBlockX() == x + minX && supplyLocation.getBlockY() == y + minY
+		    && supplyLocation.getBlockZ() == z + minZ) {
 		return;
 	    }
 	}
@@ -439,31 +373,17 @@ public class PlanArea {
 	    }
 
 	}
-
-	BuildingPlanner.plugin.getServer().getScheduler()
-		.scheduleAsyncDelayedTask(BuildingPlanner.plugin, new Runnable() {
-		    public void run() {
-			signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ)
-				.setType(BlockHelper.getMaterial(state));
-			signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ)
-				.setData(BlockHelper.getData(state));
-		    }
-
-		});
-
-	/*
-	 * try { Thread.sleep(THREAD_SLEEP_INTERVAL); } catch (InterruptedException e) { }
-	 */
+	scheduler.scheduleChange(signBlock.getWorld(), x + minX, y + minY, z + minZ, state);
 
 	return;
     }
 
     private void restoreBlockPlan(final int[][][] blockMap, final boolean ignoreSupplyChest, final boolean restoreAir) {
-
+	final ChangeScheduler scheduler = new ChangeScheduler();
 	// Overwrite attachables first.
 	AreaCycler removeAttachablesCycler = new AreaCycler() {
 	    public boolean cycle(final int x, final int y, final int z) {
-		restoreBlock(blockMap, x, y, z, ignoreSupplyChest, restoreAir, 1);
+		restoreBlock(scheduler, blockMap, x, y, z, ignoreSupplyChest, restoreAir, 1);
 		return true;
 	    }
 	};
@@ -471,7 +391,7 @@ public class PlanArea {
 	// Restore basic blocks
 	AreaCycler solidBlockCycler = new AreaCycler() {
 	    public boolean cycle(int x, int y, int z) {
-		restoreBlock(blockMap, x, y, z, ignoreSupplyChest, restoreAir, 2);
+		restoreBlock(scheduler, blockMap, x, y, z, ignoreSupplyChest, restoreAir, 2);
 		return true;
 	    }
 	};
@@ -479,7 +399,7 @@ public class PlanArea {
 	// Restore Attachables
 	AreaCycler attachableCycler = new AreaCycler() {
 	    public boolean cycle(int x, int y, int z) {
-		restoreBlock(blockMap, x, y, z, ignoreSupplyChest, restoreAir, 3);
+		restoreBlock(scheduler, blockMap, x, y, z, ignoreSupplyChest, restoreAir, 3);
 		return true;
 	    }
 	};
@@ -487,6 +407,7 @@ public class PlanArea {
 	cycleArea(removeAttachablesCycler);
 	cycleArea(solidBlockCycler);
 	cycleArea(attachableCycler);
+	scheduler.commit();
     }
 
     public void destroyArea() {
@@ -515,8 +436,8 @@ public class PlanArea {
 	Thread planRestoreThread = new Thread("Plan uncommit thread") {
 	    public void run() {
 		lock("Uncommitting plan area");
-		restoreBlockPlan(planBlocks, true, false);
 		placeBottomZone();
+		restoreBlockPlan(planBlocks, true, false);
 		committed = false;
 		saveArea();
 		unlock();
@@ -1011,19 +932,18 @@ public class PlanArea {
 	if ((!dirty) || lastChange == null) {
 	    return;
 	}
-	
 
 	Date now = new Date();
 	if (now.getTime() - lastChange.getTime() < 5000) {
 	    return;
 	}
-	
+
 	if (locked) {
-	    BuildingPlanner.info("Area "+name+" Locked: "+lockReason+" will save when unlocked..");
+	    BuildingPlanner.info("Area " + name + " Locked: " + lockReason + " will save when unlocked..");
 	    return;
 	}
 	dirty = false;
-	BuildingPlanner.info("Saving area: "+getAreaName());
+	BuildingPlanner.info("Saving area: " + getAreaName());
 	saveProps();
 
 	try {

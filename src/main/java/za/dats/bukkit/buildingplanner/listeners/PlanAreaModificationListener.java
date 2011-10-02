@@ -9,6 +9,7 @@ import org.bukkit.block.BlockState;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockDamageEvent;
+import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.block.BlockListener;
 import org.bukkit.event.block.BlockPhysicsEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
@@ -21,6 +22,24 @@ import za.dats.bukkit.buildingplanner.model.PlanArea;
 import za.dats.bukkit.buildingplanner.model.PlanArea.OpType;
 
 public class PlanAreaModificationListener extends BlockListener {
+    @Override
+    public void onBlockIgnite(BlockIgniteEvent event) {
+	if (event.isCancelled()) {
+	    return;
+	}
+	
+	PlanArea area = BuildingPlanner.plugin.areaManager.getAffectedArea(event.getBlock());
+	if (area == null) {
+	    return;
+	}
+	
+	if (!area.isCommitted() && area.isPlannedBlock(event.getBlock())) {
+	    event.setCancelled(true);
+	    return;
+	}
+        super.onBlockIgnite(event);
+    }
+    
     @Override
     public void onBlockDamage(BlockDamageEvent event) {
 	if (event.isCancelled()) {

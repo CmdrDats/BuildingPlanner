@@ -36,12 +36,14 @@ public class PlanAreaManager implements PlanAreaListener {
 
 	PlanAreaModificationListener areaModifyListener = new PlanAreaModificationListener();
 	BuildingPlanner.pm.registerEvent(Type.BLOCK_BREAK, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
+	BuildingPlanner.pm.registerEvent(Type.BLOCK_IGNITE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
 	BuildingPlanner.pm.registerEvent(Type.BLOCK_PHYSICS, areaModifyListener, Priority.Normal,
 		BuildingPlanner.plugin);
 	BuildingPlanner.pm
 		.registerEvent(Type.BLOCK_DAMAGE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
 	BuildingPlanner.pm.registerEvent(Type.BLOCK_PLACE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
 
+	
 	PlayerAreaListener movementListener = new PlayerAreaListener();
 	BuildingPlanner.pm.registerEvent(Type.PLAYER_INTERACT, movementListener, Priority.Normal,
 		BuildingPlanner.plugin);
@@ -49,6 +51,8 @@ public class PlanAreaManager implements PlanAreaListener {
 		BuildingPlanner.plugin);
 
 	BuildingPlanner.pm.registerEvent(Type.ENTITY_DAMAGE, new PlanEntityListener(), Priority.Normal,
+		BuildingPlanner.plugin);
+	BuildingPlanner.pm.registerEvent(Type.ENTITY_EXPLODE, new PlanEntityListener(), Priority.Normal,
 		BuildingPlanner.plugin);
 
 	Thread supplyCheckThread = new Thread("PlanAreaSupplyThread") {

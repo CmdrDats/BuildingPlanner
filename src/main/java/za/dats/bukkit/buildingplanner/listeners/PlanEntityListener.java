@@ -1,7 +1,11 @@
 package za.dats.bukkit.buildingplanner.listeners;
 
+import java.util.List;
+
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityListener;
 import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 
@@ -33,12 +37,33 @@ public class PlanEntityListener extends EntityListener {
 	if (area.isCommitted()) {
 	    return;
 	}
-	
+
 	if (!area.checkPermission(player, OpType.MODIFY)) {
 	    event.setCancelled(true);
 	    return;
 	}
 
 	event.setCancelled(true);
+    }
+
+    @Override
+    public void onEntityExplode(EntityExplodeEvent event) {
+	List<Block> blockList = event.blockList();
+
+	for (Block block : blockList) {
+	    PlanArea area = BuildingPlanner.plugin.areaManager.getAffectedArea(block);
+	    if (area == null) {
+		continue;
+	    }
+	    
+	    if (area.isCommitted()) {
+		continue;
+	    }
+	    
+	    if (area.isPlannedBlock(block)) {
+		event.setCancelled(true);
+	    }
+	}
+	super.onEntityExplode(event);
     }
 }

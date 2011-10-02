@@ -8,6 +8,10 @@ Not only does it let you place infinite blocks, but when you make mistakes, a si
 ChangeLog
 ---------
 v0.5.0
+	- Changing blocks now happens in a scheduled async thread in chunks to make it less load heavy on the server..
+	- FIX: Redstone on carpet in air duping
+	- FIX: Infinite active TNT problem
+	- FIX: Issue with Saving and destroying plans concurrently
 	- Added /plan uninvite PlayerName [areaname] to uninvite collaborator
 	- Added /plan invite PlayerName [areaname] to invite collaborator (owners and buildingplanner.anyarea only can do this)
 	- Added /plan give option to transfer ownership
