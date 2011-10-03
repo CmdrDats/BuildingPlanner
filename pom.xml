@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>me.cmdrdats.plugins.buildingplanner</groupId>
     <artifactId>BuildingPlanner</artifactId>
-    <version>0.5.0</version>
+    <version>0.5.1</version>
     <name>BuildingPlanner</name>
     <url>https://github.com/CmdrDats/BuildingPlanner</url>
     <repositories>

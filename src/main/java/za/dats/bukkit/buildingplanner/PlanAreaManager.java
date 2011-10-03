@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.event.Event.Priority;
 import org.bukkit.event.Event.Type;
@@ -36,23 +37,27 @@ public class PlanAreaManager implements PlanAreaListener {
 
 	PlanAreaModificationListener areaModifyListener = new PlanAreaModificationListener();
 	BuildingPlanner.pm.registerEvent(Type.BLOCK_BREAK, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
-	BuildingPlanner.pm.registerEvent(Type.BLOCK_IGNITE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
+	BuildingPlanner.pm
+		.registerEvent(Type.BLOCK_IGNITE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
 	BuildingPlanner.pm.registerEvent(Type.BLOCK_PHYSICS, areaModifyListener, Priority.Normal,
 		BuildingPlanner.plugin);
 	BuildingPlanner.pm
 		.registerEvent(Type.BLOCK_DAMAGE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
 	BuildingPlanner.pm.registerEvent(Type.BLOCK_PLACE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
 
-	
 	PlayerAreaListener movementListener = new PlayerAreaListener();
 	BuildingPlanner.pm.registerEvent(Type.PLAYER_INTERACT, movementListener, Priority.Normal,
 		BuildingPlanner.plugin);
+	BuildingPlanner.pm.registerEvent(Type.PLAYER_MOVE, movementListener, Priority.Normal,
+		BuildingPlanner.plugin);
+	
 	BuildingPlanner.pm.registerEvent(Type.ITEM_SPAWN, new PlanItemListener(), Priority.Normal,
 		BuildingPlanner.plugin);
 
-	BuildingPlanner.pm.registerEvent(Type.ENTITY_DAMAGE, new PlanEntityListener(), Priority.Normal,
+	PlanEntityListener entityListener = new PlanEntityListener();
+	BuildingPlanner.pm.registerEvent(Type.ENTITY_DAMAGE, entityListener, Priority.Normal,
 		BuildingPlanner.plugin);
-	BuildingPlanner.pm.registerEvent(Type.ENTITY_EXPLODE, new PlanEntityListener(), Priority.Normal,
+	BuildingPlanner.pm.registerEvent(Type.ENTITY_EXPLODE, entityListener, Priority.Normal,
 		BuildingPlanner.plugin);
 
 	Thread supplyCheckThread = new Thread("PlanAreaSupplyThread") {
@@ -116,65 +121,90 @@ public class PlanAreaManager implements PlanAreaListener {
 	for (File file : areaList) {
 	    PlanArea area = new PlanArea();
 	    area.loadArea(file);
-	    planAreas.add(area);
+	    synchronized (planAreas) {
+		planAreas.add(area);
+	    }
 	}
     }
 
     protected void saveAreas() {
-	for (PlanArea area : planAreas) {
-	    try {
-		area.trySave();
-		// If one area breaks, we don't want the rest to not save..
-	    } catch (Throwable e) {
-		e.printStackTrace();
+	synchronized (planAreas) {
+	    for (PlanArea area : planAreas) {
+		try {
+		    area.trySave();
+		    // If one area breaks, we don't want the rest to not save..
+		} catch (Throwable e) {
+		    e.printStackTrace();
+		}
 	    }
 	}
     }
 
     protected boolean checkAreas() {
 	boolean result = false;
-	for (PlanArea area : planAreas) {
-	    if (!area.isCommitted()) {
-		continue;
-	    }
 
-	    if (area.buildFromSupply(1)) {
-		result = true;
+	synchronized (planAreas) {
+	    for (PlanArea area : planAreas) {
+		if (!area.isCommitted()) {
+		    continue;
+		}
+
+		if (area.buildFromSupply(1)) {
+		    result = true;
+		}
 	    }
 	}
-
 	return result;
     }
 
     public void create(PlanArea area) {
-	planAreas.add(area);
+	synchronized (planAreas) {
+	    planAreas.add(area);
+	}
 	area.saveArea();
     }
 
     public void destroy(PlanArea area) {
-	planAreas.remove(area);
+	synchronized (planAreas) {
+	    planAreas.remove(area);
+	}
 	area.deleteArea();
     }
 
-    public PlanArea getAffectedArea(Block block) {
-	for (PlanArea area : planAreas) {
-	    /*
-	     * if (includeSignAndFence && (area.fenceContains(block) || block.equals(area.getSignBlock()))) { return
-	     * null; }
-	     */
-
-	    if (area.isInside(block)) {
-		return area;
+    public PlanArea getAffectedArea(Location location) {
+	synchronized (planAreas) {
+	    for (PlanArea area : planAreas) {
+		if (area.isInside(location)) {
+		    return area;
+		}
 	    }
 	}
+	
+	return null;
+    }
+    
+    public PlanArea getAffectedArea(Block block) {
+	synchronized (planAreas) {
+	    for (PlanArea area : planAreas) {
+		/*
+		 * if (includeSignAndFence && (area.fenceContains(block) || block.equals(area.getSignBlock()))) { return
+		 * null; }
+		 */
 
+		if (area.isInside(block)) {
+		    return area;
+		}
+	    }
+	}
 	return null;
     }
 
     public PlanArea getAreaByName(String areaName) {
-	for (PlanArea area : planAreas) {
-	    if (areaName.equals(area.getName())) {
-		return area;
+	synchronized (planAreas) {
+	    for (PlanArea area : planAreas) {
+		if (areaName.equals(area.getName())) {
+		    return area;
+		}
 	    }
 	}
 	return null;

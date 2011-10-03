@@ -807,6 +807,12 @@ public class PlanArea {
 	File areaFile = new File(BuildingPlanner.plugin.getDataFolder(), fileName);
 	return areaFile;
     }
+    
+    public File getAreaDataFileTmp() {
+	String fileName = OldReader.getCoord(signBlock.getLocation()) + ".datatmp";
+	File areaFile = new File(BuildingPlanner.plugin.getDataFolder(), fileName);
+	return areaFile;
+    }
 
     public File getAreaDescriptorFile() {
 	String fileName = OldReader.getCoord(signBlock.getLocation()) + ".area";
@@ -952,7 +958,7 @@ public class PlanArea {
 	saveProps();
 
 	try {
-	    File areaData = getAreaDataFile();
+	    File areaData = getAreaDataFileTmp();
 	    final FileOutputStream out = new FileOutputStream(areaData);
 	    DataOutputStream outStream = new DataOutputStream(out);
 
@@ -973,6 +979,13 @@ public class PlanArea {
 
 	    outStream.close();
 	    out.close();
+	    
+	    
+	    File areaDataFile = getAreaDataFile();
+	    if (areaDataFile.exists()) {
+		areaDataFile.delete();
+	    }
+	    areaData.renameTo(areaDataFile);
 	} catch (Exception e) {
 	    e.printStackTrace();
 	}

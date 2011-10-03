@@ -40,6 +40,7 @@ public class Config {
 	defaults.put("maxSize", 128);
 	defaults.put("protectedFromFalling", true);
 	defaults.put("ownerEditOnly", true);
+	defaults.put("useCreativeMode", false);
 	/*
 	defaults.put("lang.createConfirm", "&EBuilt <name>!");
 	defaults.put("lang.destroyed", "&EDestroyed Memory Stone Structure!");
@@ -134,6 +135,10 @@ public class Config {
 
     public static boolean isOwnerEditOnly() {
 	return conf.getBoolean("ownerEditOnly", true);
+    }
+
+    public static boolean isCreativeModeEnabled() {
+	return conf.getBoolean("useCreativeMode", false);
     }
                                             
 }

@@ -153,7 +153,7 @@ public class PlanAreaCreationListener extends BlockListener {
 	if ((area.getMaxX() - area.getMinX() > Config.getMaxSize())
 		|| (area.getMaxZ() - area.getMinZ() > Config.getMaxSize())
 		|| (area.getMaxY() - area.getMinY() > Config.getMaxHeight())) {
-	    
+
 	    event.setLine(1, BuildingPlanner.color("&CArea too"));
 	    event.setLine(2, BuildingPlanner.color("&Clarge"));
 	    return;
@@ -200,15 +200,17 @@ public class PlanAreaCreationListener extends BlockListener {
 		int leftPart = sizeX / 2;
 		int rightPart = sizeX - leftPart;
 
-		if (area.getSignBlock().getLocation().getBlockY()+sizeY > area.getSignBlock().getWorld().getMaxHeight()) {
-		    sizeY = area.getSignBlock().getWorld().getMaxHeight()-area.getSignBlock().getLocation().getBlockY()-1;
+		if (area.getSignBlock().getLocation().getBlockY() + sizeY > area.getSignBlock().getWorld()
+			.getMaxHeight()) {
+		    sizeY = area.getSignBlock().getWorld().getMaxHeight()
+			    - area.getSignBlock().getLocation().getBlockY() - 1;
 		}
+
 		Block supplyBlock = area.getSignBlock().getRelative(leftFace);
 		Block leftBlock = area.getSignBlock().getRelative(leftFace, leftPart);
-		Block rightBlock = area.getSignBlock().getRelative(rightFace, rightPart);
-		Block backBlock = area.getSignBlock().getRelative(backFace, sizeZ);
-		Block upBlock = area.getSignBlock().getRelative(BlockFace.UP, sizeY);
-
+		Block rightBlock = area.getSignBlock().getRelative(rightFace, rightPart-1);
+		Block backBlock = area.getSignBlock().getRelative(backFace, sizeZ-1);
+		Block upBlock = area.getSignBlock().getRelative(BlockFace.UP, sizeY-1);
 		area.add(supplyBlock, false);
 		area.add(leftBlock, false);
 		area.add(rightBlock, false);

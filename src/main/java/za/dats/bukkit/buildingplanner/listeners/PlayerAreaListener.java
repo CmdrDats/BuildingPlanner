@@ -5,6 +5,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -21,6 +22,7 @@ import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.ItemStack;
 
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
+import za.dats.bukkit.buildingplanner.Config;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
 import za.dats.bukkit.buildingplanner.model.PlanArea.OpType;
 
@@ -36,7 +38,14 @@ public class PlayerAreaListener extends PlayerListener {
 	    return;
 	}
 	
-	if (event.getClickedBlock().getType().equals(Material.CAKE_BLOCK)) {
+	switch (event.getClickedBlock().getType()) {
+	case CAKE_BLOCK :
+	case BED_BLOCK :
+	case CHEST :
+	case FURNACE :
+	case BURNING_FURNACE :
+	case LOCKED_CHEST :
+	case WORKBENCH :
 	    if (!area.isCommitted() && area.isPlannedBlock(event.getClickedBlock())) {
 		event.setCancelled(true);
 		return;
@@ -90,5 +99,24 @@ public class PlayerAreaListener extends PlayerListener {
 	    event.getPlayer().sendMessage("To commit this plan, right click the sign again within 5 seconds.");
 	}
     }
+    
+    public void onPlayerMove(PlayerMoveEvent event) {
+	if (event.isCancelled()) {
+	    return;
+	}
+	if (!Config.isCreativeModeEnabled()) {
+	    return;
+	}
+	PlanArea fromArea = BuildingPlanner.plugin.areaManager.getAffectedArea(event.getFrom());
+	
+	PlanArea toArea = BuildingPlanner.plugin.areaManager.getAffectedArea(event.getTo());
+	
+	if (fromArea == null && toArea != null) {
+	    event.getPlayer().setGameMode(GameMode.CREATIVE);
+	} else if (fromArea != null && toArea == null) {
+	    event.getPlayer().setGameMode(GameMode.SURVIVAL);
+	    
+	}
+    };
 
 }
