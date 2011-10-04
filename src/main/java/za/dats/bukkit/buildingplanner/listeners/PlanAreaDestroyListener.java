@@ -31,25 +31,25 @@ public class PlanAreaDestroyListener extends BlockListener {
 		event.setCancelled(true);
 		return;
 	    }
-	    
+
 	    if (area.fenceContains(event.getBlock()) || event.getBlock().equals(area.getSignBlock())) {
 		if (!area.checkPermission(event.getPlayer(), OpType.DESTROY)) {
 		    event.setCancelled(true);
 		    return;
 		}
-		
+
 		if (area.isLocked()) {
-		    event.getPlayer().sendMessage("Area is locked: "+area.getLockReason());
+		    event.getPlayer().sendMessage("Area is locked: " + area.getLockReason());
 		    event.setCancelled(true);
 		    return;
 		}
-		
+
 		BuildingPlanner.info("Destroying Plan");
 		final PlanArea destroyArea = area;
 		Thread planDestroyThread = new Thread("Plan destroy thread") {
 		    public void run() {
 			destroyArea.destroyArea();
-			
+
 			for (PlanAreaListener listener : listeners) {
 			    listener.destroy(destroyArea);
 			}
@@ -61,7 +61,7 @@ public class PlanAreaDestroyListener extends BlockListener {
 	    }
 	}
     }
-    
+
     public void addListener(PlanAreaListener listener) {
 	listeners.add(listener);
     }

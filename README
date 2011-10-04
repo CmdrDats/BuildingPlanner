@@ -7,6 +7,12 @@ Not only does it let you place infinite blocks, but when you make mistakes, a si
 
 ChangeLog
 ---------
+v0.5.2
+	- Added buildingplanner.*, buildingplanner.architect and buildingplanner.planner permission groups
+	- FIX: Attachables didn't get removed properly when committing/uncommitting
+	- FIX: Always one fence in supply chest, regardless whether any were actually lifted.
+	-[TESTING] FIX: Destroying a sign destroyed the area but left the sign due to lock.
+
 v0.5.1
 	- Disable use of planned chests, beds, crafting tables and furnaces.
 	- Preliminary (read: buggy) support for switching to creative mode - switch the useCreativeMode config option.

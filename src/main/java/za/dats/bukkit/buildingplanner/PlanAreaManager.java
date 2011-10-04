@@ -119,6 +119,7 @@ public class PlanAreaManager implements PlanAreaListener {
 	});
 
 	for (File file : areaList) {
+	    BuildingPlanner.info("Loading Area: "+file.getName());
 	    PlanArea area = new PlanArea();
 	    area.loadArea(file);
 	    synchronized (planAreas) {

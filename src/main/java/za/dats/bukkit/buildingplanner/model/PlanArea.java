@@ -269,11 +269,16 @@ public class PlanArea {
 
     private void placeSupplyChest() {
 	if (supplyBlock != null) {
+	    int fenceSize = fenceBlocks.size();
+	    if (!Material.FENCE.equals(supplyBlock.getType())) {
+		fenceSize--;
+	    }
+	    
 	    if (!Material.CHEST.equals(supplyBlock.getType())) {
 		supplyBlock.setType(Material.CHEST);
 	    }
 
-	    if (Config.isFenceLiftEnabled()) {
+	    if (Config.isFenceLiftEnabled() && fenceSize > 0) {
 		ItemStack stack = new ItemStack(Material.FENCE, fenceBlocks.size());
 		Chest chest = (Chest) supplyBlock.getState();
 		chest.getInventory().addItem(stack);
@@ -351,9 +356,6 @@ public class PlanArea {
 	}
 
 	if (mode == 1) {
-	    if (BlockHelper.isAir(state)) {
-		return;
-	    }
 	    if (!(block.getState().getData() instanceof SimpleAttachableMaterialData)) {
 		return;
 	    }
@@ -807,7 +809,7 @@ public class PlanArea {
 	File areaFile = new File(BuildingPlanner.plugin.getDataFolder(), fileName);
 	return areaFile;
     }
-    
+
     public File getAreaDataFileTmp() {
 	String fileName = OldReader.getCoord(signBlock.getLocation()) + ".datatmp";
 	File areaFile = new File(BuildingPlanner.plugin.getDataFolder(), fileName);
@@ -979,8 +981,7 @@ public class PlanArea {
 
 	    outStream.close();
 	    out.close();
-	    
-	    
+
 	    File areaDataFile = getAreaDataFile();
 	    if (areaDataFile.exists()) {
 		areaDataFile.delete();

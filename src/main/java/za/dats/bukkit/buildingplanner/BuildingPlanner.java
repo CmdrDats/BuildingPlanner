@@ -40,10 +40,12 @@ public class BuildingPlanner extends JavaPlugin {
 	    info(pdf.getName() + " version " + pdf.getVersion() + " is DISABLED by configuration.");
 	    return;
 	}
-	getCommand("plan").setExecutor(new PlanPluginCommand());
-
 	pm = getServer().getPluginManager();
 	pdf = getDescription();
+	
+	info(pdf.getName() + " version " + pdf.getVersion() + " is loading..");
+	getCommand("plan").setExecutor(new PlanPluginCommand());
+
 
 	areaManager = new PlanAreaManager();
 	areaManager.init();

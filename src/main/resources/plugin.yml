@@ -11,7 +11,7 @@ main: za.dats.bukkit.buildingplanner.BuildingPlanner
 name: BuildingPlanner
 startup: postworld
 url: https://github.com/CmdrDats/BuildingPlanner
-version: '0.5.1'
+version: '0.5.2'
 commands:
   plan:
     aliases: [plancommand]
@@ -20,6 +20,48 @@ commands:
       Usage: /<command> version
       Usage: /<command> version playername
 permissions:
+  buildingplanner.*:
+    description: gives access to all BuildingPlanner permissions
+    children:
+      buildingplanner.anyarea: true
+      buildingplanner.create: true
+      buildingplanner.destroy: true
+      buildingplanner.use: true
+      buildingplanner.commit: true
+      buildingplanner.uncommit: true
+      buildingplanner.list: true
+      buildingplanner.report: true
+      buildingplanner.send: true
+      buildingplanner.invite: true
+      buildingplanner.give: true
+  buildingplanner.architect:
+    description: access to architect level permissions (creating/destroying plans)
+    children:
+      buildingplanner.anyarea: false
+      buildingplanner.create: true
+      buildingplanner.destroy: true
+      buildingplanner.use: true
+      buildingplanner.commit: true
+      buildingplanner.uncommit: true
+      buildingplanner.list: true
+      buildingplanner.report: true
+      buildingplanner.send: true
+      buildingplanner.invite: true
+      buildingplanner.give: true
+  buildingplanner.planner:
+    description: access to planning level permissions (use, commit, uncommit, etc.)
+    children:
+      buildingplanner.anyarea: false
+      buildingplanner.create: false
+      buildingplanner.destroy: false
+      buildingplanner.use: true
+      buildingplanner.commit: true
+      buildingplanner.uncommit: true
+      buildingplanner.list: false
+      buildingplanner.report: true
+      buildingplanner.send: false
+      buildingplanner.invite: false
+      buildingplanner.give: false
   buildingplanner.anyarea:
     description: Allowed to destroy/commit/uncommit/modify any area (even if not owner or collaborator)
     default: op
