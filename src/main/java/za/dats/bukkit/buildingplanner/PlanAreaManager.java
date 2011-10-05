@@ -75,14 +75,6 @@ public class PlanAreaManager implements PlanAreaListener {
 		    } catch (Throwable e) {
 			e.printStackTrace();
 		    }
-
-		    try {
-			saveAreas();
-			// Catch all throwables so that the thread doesn't die if something breaks.
-		    } catch (Throwable e) {
-			e.printStackTrace();
-		    }
-
 		}
 	    }
 	};
@@ -96,7 +88,7 @@ public class PlanAreaManager implements PlanAreaListener {
 
 		    try {
 			saveAreas();
-			Thread.sleep(1000);
+			Thread.sleep(5000);
 			// Catch all throwables so that the thread doesn't die if something breaks.
 		    } catch (Throwable e) {
 			e.printStackTrace();

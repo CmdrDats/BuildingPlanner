@@ -1,23 +1,25 @@
 package za.dats.bukkit.buildingplanner.model;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
+import za.dats.bukkit.buildingplanner.listeners.ChangeSetCompleteListener;
 
 public class ChangeSet implements Runnable {
-    List<Change> changes;
+    Queue<Change> changes;
+    private int taskId;
+    ChangeSetCompleteListener listener;
 
-    public ChangeSet() {
-	this(10);
-    }
-
-    public ChangeSet(int initialSize) {
-	changes = new ArrayList<Change>(initialSize);
+    public ChangeSet(ChangeSetCompleteListener listener) {
+	this.listener = listener;
+	changes = new LinkedList<Change>();
     }
 
     public void add(Change change) {
-	changes.add(change);
+	changes.offer(change);
     }
 
     public int size() {
@@ -25,28 +27,20 @@ public class ChangeSet implements Runnable {
     }
 
     public void run() {
-	for (Change change : changes) {
-	    change.apply();
+	Change poll = changes.poll();
+	if (poll == null) {
+	    BuildingPlanner.plugin.getServer().getScheduler().cancelTask(taskId);
+	    listener.complete();
+	    return;
 	}
+	poll.apply();
     }
 
     public void commit() {
-	BuildingPlanner.plugin.getServer().getScheduler().scheduleSyncDelayedTask(BuildingPlanner.plugin, this, 3);
-    }
-    
-    public void undo() {
-	BuildingPlanner.plugin.getServer().getScheduler()
-	.scheduleSyncDelayedTask(BuildingPlanner.plugin, new Runnable() {
-	    public void run() {
-		undoChangeSet();
-	    }
-	}, 3);
-	
-    }
-
-    protected void undoChangeSet() {
-	for (Change change : changes) {
-	    change.undo();
+	if (changes.size() == 0) {
+	    listener.complete();
+	    return;
 	}
+	taskId = BuildingPlanner.plugin.getServer().getScheduler().scheduleSyncRepeatingTask(BuildingPlanner.plugin, this, 1, 1);
     }
 }

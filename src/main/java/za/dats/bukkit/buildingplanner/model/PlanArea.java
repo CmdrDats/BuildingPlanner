@@ -33,8 +33,8 @@ import org.bukkit.util.config.Configuration;
 import org.bukkit.util.config.ConfigurationNode;
 
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
-import za.dats.bukkit.buildingplanner.ChangeScheduler;
 import za.dats.bukkit.buildingplanner.Config;
+import za.dats.bukkit.buildingplanner.listeners.ChangeSetCompleteListener;
 import za.dats.bukkit.buildingplanner.model.PlanArea.OpType;
 
 public class PlanArea {
@@ -273,7 +273,7 @@ public class PlanArea {
 	    if (!Material.FENCE.equals(supplyBlock.getType())) {
 		fenceSize--;
 	    }
-	    
+
 	    if (!Material.CHEST.equals(supplyBlock.getType())) {
 		supplyBlock.setType(Material.CHEST);
 	    }
@@ -288,7 +288,11 @@ public class PlanArea {
     }
 
     private void placeBottomZone() {
-	ChangeScheduler scheduler = new ChangeScheduler();
+	ChangeSet scheduler = new ChangeSet(new ChangeSetCompleteListener() {
+	    public void complete() {
+	    }
+	});
+	
 	World world = signBlock.getWorld();
 	int floorState = BlockHelper.getState(Material.WOOL, (byte) Config.getFloorColour().getData());
 	int gridState = BlockHelper.getState(Material.WOOL, (byte) Config.getGridColour().getData());
@@ -307,11 +311,12 @@ public class PlanArea {
 		int state = floorState;
 		if (xOffset % 5 != 0 && zOffset % 5 != 0) {
 		    state = floorState;
+		    continue;
 		} else {
 		    state = gridState;
 		}
 
-		scheduler.scheduleChange(world, x, minY, z, state);
+		scheduler.add(new Change(world, x, minY, z, state));
 	    }
 	}
 
@@ -326,7 +331,22 @@ public class PlanArea {
 	boolean cycle(int x, int y, int z);
     }
 
-    public void cycleArea(AreaCycler cycler) {
+    public void cycleArea(AreaCycler cycler, boolean reverse) {
+	// There is probably a cleaner way of doing this... oh well.
+
+	if (reverse) {
+	    for (int y = sizeY - 1; y >= 0; y--) {
+		for (int x = sizeX - 1; x >= 0; x--) {
+		    for (int z = sizeZ - 1; z >= 0; z--) {
+			if (!cycler.cycle(x, y, z)) {
+			    return;
+			}
+		    }
+		}
+	    }
+	    return;
+	}
+
 	for (int y = 0; y < sizeY; y++) {
 	    for (int x = 0; x < sizeX; x++) {
 		for (int z = 0; z < sizeZ; z++) {
@@ -338,8 +358,8 @@ public class PlanArea {
 	}
     }
 
-    private void restoreBlock(ChangeScheduler scheduler, final int[][][] blockMap, final int x, final int y,
-	    final int z, boolean ignoreSupplyChest, boolean restoreAir, int mode) {
+    private void restoreBlock(ChangeSet changeSet, final int[][][] blockMap, final int x, final int y, final int z,
+	    boolean ignoreSupplyChest, boolean restoreAir, int mode) {
 	if (ignoreSupplyChest) {
 	    Location supplyLocation = supplyBlock.getLocation();
 	    if (supplyLocation.getBlockX() == x + minX && supplyLocation.getBlockY() == y + minY
@@ -350,12 +370,13 @@ public class PlanArea {
 
 	final int state = blockMap[x][y][z];
 
-	final Block block = signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ);
-	if (BlockHelper.isAir(state) && block.getType().equals(Material.AIR)) {
+	if ((planBlocks[x][y][z] == 0) && (!isFloorBlock(x, y, z))) {
 	    return;
 	}
 
+	
 	if (mode == 1) {
+	    final Block block = signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ);
 	    if (!(block.getState().getData() instanceof SimpleAttachableMaterialData)) {
 		return;
 	    }
@@ -376,17 +397,17 @@ public class PlanArea {
 	    }
 
 	}
-	scheduler.scheduleChange(signBlock.getWorld(), x + minX, y + minY, z + minZ, state);
+	changeSet.add(new Change(signBlock.getWorld(), x + minX, y + minY, z + minZ, state));
 
 	return;
     }
 
-    private void restoreBlockPlan(final int[][][] blockMap, final boolean ignoreSupplyChest, final boolean restoreAir) {
-	final ChangeScheduler scheduler = new ChangeScheduler();
+    private void restoreBlockPlan(final ChangeSet changeSet, final int[][][] blockMap, final boolean ignoreSupplyChest,
+	    final boolean restoreAir) {
 	// Overwrite attachables first.
 	AreaCycler removeAttachablesCycler = new AreaCycler() {
 	    public boolean cycle(final int x, final int y, final int z) {
-		restoreBlock(scheduler, blockMap, x, y, z, ignoreSupplyChest, restoreAir, 1);
+		restoreBlock(changeSet, blockMap, x, y, z, ignoreSupplyChest, restoreAir, 1);
 		return true;
 	    }
 	};
@@ -394,7 +415,7 @@ public class PlanArea {
 	// Restore basic blocks
 	AreaCycler solidBlockCycler = new AreaCycler() {
 	    public boolean cycle(int x, int y, int z) {
-		restoreBlock(scheduler, blockMap, x, y, z, ignoreSupplyChest, restoreAir, 2);
+		restoreBlock(changeSet, blockMap, x, y, z, ignoreSupplyChest, restoreAir, 2);
 		return true;
 	    }
 	};
@@ -402,54 +423,65 @@ public class PlanArea {
 	// Restore Attachables
 	AreaCycler attachableCycler = new AreaCycler() {
 	    public boolean cycle(int x, int y, int z) {
-		restoreBlock(scheduler, blockMap, x, y, z, ignoreSupplyChest, restoreAir, 3);
+		restoreBlock(changeSet, blockMap, x, y, z, ignoreSupplyChest, restoreAir, 3);
 		return true;
 	    }
 	};
 
-	cycleArea(removeAttachablesCycler);
-	cycleArea(solidBlockCycler);
-	cycleArea(attachableCycler);
-	scheduler.commit();
+	cycleArea(removeAttachablesCycler, restoreAir);
+	cycleArea(solidBlockCycler, restoreAir);
+	cycleArea(attachableCycler, restoreAir);
+	changeSet.commit();
     }
 
     public void destroyArea() {
+	BuildingPlanner.info("Starting destroy: " + getAreaName());
 	lock("Destroying plan area");
-	restoreBlockPlan(originalBlocks, false, true);
-	committed = true;
-	destroyed = true;
-	deleteArea();
-	unlock();
+	ChangeSet set = new ChangeSet(new ChangeSetCompleteListener() {
+	    public void complete() {
+		committed = true;
+		destroyed = true;
+		unlock();
+		deleteArea();
+		BuildingPlanner.info("Finished destroy: " + getAreaName());
+	    }
+	});
+	restoreBlockPlan(set, originalBlocks, false, true);
     }
 
     public void commit() {
-	Thread planRestoreThread = new Thread("Plan commit thread") {
-	    public void run() {
-		lock("Committing plan area");
-		restoreBlockPlan(originalBlocks, true, true);
+	BuildingPlanner.info("Starting commit: " + getAreaName());
+	lock("Committing plan area");
+	ChangeSet set = new ChangeSet(new ChangeSetCompleteListener() {
+
+	    public void complete() {
 		committed = true;
 		saveArea();
 		unlock();
-	    };
-	};
-	planRestoreThread.setDaemon(true);
-	planRestoreThread.start();
+		BuildingPlanner.info("Finished commit: " + getAreaName());
+	    }
+
+	});
+
+	restoreBlockPlan(set, originalBlocks, true, true);
     }
 
     public void unCommit() {
-	Thread planRestoreThread = new Thread("Plan uncommit thread") {
-	    public void run() {
-		lock("Uncommitting plan area");
-		placeBottomZone();
-		restoreBlockPlan(planBlocks, true, false);
+	BuildingPlanner.info("Starting uncommit: " + getAreaName());
+	lock("Uncommitting plan area");
+	placeBottomZone();
+	ChangeSet set = new ChangeSet(new ChangeSetCompleteListener() {
+	    public void complete() {
 		committed = false;
 		saveArea();
 		unlock();
-	    };
-	};
-	planRestoreThread.setDaemon(true);
-	planRestoreThread.start();
+		BuildingPlanner.info("Finished uncommit: " + getAreaName());
+	    }
+	});
+	restoreBlockPlan(set, planBlocks, true, false);
     }
+    
+    
 
     public boolean isFloorBlock(Block block) {
 	Location loc = block.getLocation();
@@ -468,6 +500,14 @@ public class PlanArea {
 	return true;
     }
 
+    public boolean isFloorBlock(int x, int y, int z) {
+	if (y != 0) {
+	    return false;
+	}
+
+	return true;
+    }
+    
     public boolean isInside(Block block) {
 	Location loc = block.getLocation();
 	return isInside(loc);
@@ -651,7 +691,7 @@ public class PlanArea {
 
 		return true;
 	    }
-	});
+	}, false);
 
 	return counts;
     }
@@ -785,7 +825,7 @@ public class PlanArea {
 
 		return true;
 	    }
-	});
+	}, false);
 
 	if (count.get() > 0) {
 	    saveArea();
