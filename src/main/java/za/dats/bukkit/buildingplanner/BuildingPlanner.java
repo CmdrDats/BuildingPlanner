@@ -2,6 +2,9 @@ package za.dats.bukkit.buildingplanner;
 
 import java.util.regex.Pattern;
 
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
+
 import org.bukkit.plugin.PluginDescriptionFile;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;

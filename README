@@ -7,6 +7,12 @@ Not only does it let you place infinite blocks, but when you make mistakes, a si
 
 ChangeLog
 ---------
+v0.5.4
+	- FIX: Chest dup issue when creating and destroying plans.
+	- FIX: Issue with default height not calculating quite correctly.
+	- FIX: When things pop off from their attached locations, plan updates accordingly.
+	- FIX: Attachables in the plan makes sure their attached things are built before attempting placement.
+
 v0.5.3
 	- Improved the way committing/uncommitting works. Now much slower and server friendly.
 	

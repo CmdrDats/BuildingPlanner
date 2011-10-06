@@ -21,7 +21,6 @@ public class Change {
     public void apply() {
         Block block = world.getBlockAt(x, y, z);
         oldState = BlockHelper.getSate(block.getState());
-        
         block.setType(BlockHelper.getMaterial(state));
         block.setData(BlockHelper.getData(state));
     }

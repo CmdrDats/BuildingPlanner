@@ -21,6 +21,7 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Chest;
 import org.bukkit.entity.Player;
@@ -292,7 +293,7 @@ public class PlanArea {
 	    public void complete() {
 	    }
 	});
-	
+
 	World world = signBlock.getWorld();
 	int floorState = BlockHelper.getState(Material.WOOL, (byte) Config.getFloorColour().getData());
 	int gridState = BlockHelper.getState(Material.WOOL, (byte) Config.getGridColour().getData());
@@ -371,10 +372,18 @@ public class PlanArea {
 	final int state = blockMap[x][y][z];
 
 	if ((planBlocks[x][y][z] == 0) && (!isFloorBlock(x, y, z))) {
-	    return;
+	    if (!ignoreSupplyChest) {
+		Location supplyLocation = supplyBlock.getLocation();
+		if (!(supplyLocation.getBlockX() == x + minX && supplyLocation.getBlockY() == y + minY && supplyLocation
+			.getBlockZ() == z + minZ)) {
+		    return;
+		}
+	    } else {
+		return;
+	    }
+
 	}
 
-	
 	if (mode == 1) {
 	    final Block block = signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ);
 	    if (!(block.getState().getData() instanceof SimpleAttachableMaterialData)) {
@@ -480,8 +489,6 @@ public class PlanArea {
 	});
 	restoreBlockPlan(set, planBlocks, true, false);
     }
-    
-    
 
     public boolean isFloorBlock(Block block) {
 	Location loc = block.getLocation();
@@ -507,7 +514,7 @@ public class PlanArea {
 
 	return true;
     }
-    
+
     public boolean isInside(Block block) {
 	Location loc = block.getLocation();
 	return isInside(loc);
@@ -781,14 +788,6 @@ public class PlanArea {
 			    amount--;
 			}
 
-			if (amount <= 0) {
-			    chest.getInventory().setItem(i, null);
-			} else {
-			    itemStack.setAmount(amount);
-			}
-
-			count.incrementAndGet();
-
 			Block planBlock = signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ);
 			// Add the top of the door
 			if (data instanceof Door) {
@@ -808,11 +807,19 @@ public class PlanArea {
 			    }
 			}
 
-			buildBlock(x, y, z);
+			if (buildBlock(x, y, z)) {
+			    if (amount <= 0) {
+				chest.getInventory().setItem(i, null);
+			    } else {
+				itemStack.setAmount(amount);
+			    }
 
-			// Stop looking when count is reached
-			if (count.get() >= maxItems || amount == 0) {
-			    return false;
+			    count.incrementAndGet();
+
+			    // Stop looking when count is reached
+			    if (count.get() >= maxItems || amount == 0) {
+				return false;
+			    }
 			}
 		    }
 
@@ -835,13 +842,26 @@ public class PlanArea {
 	return false;
     }
 
-    protected void buildBlock(int x, int y, int z) {
+    protected boolean buildBlock(int x, int y, int z) {
 	int state = planBlocks[x][y][z];
 	Block block = signBlock.getWorld().getBlockAt(x + minX, y + minY, z + minZ);
+
+	MaterialData materialData = BlockHelper.getMaterialData(state);
+	if (materialData instanceof SimpleAttachableMaterialData) {
+	    SimpleAttachableMaterialData attachable = (SimpleAttachableMaterialData) materialData;
+	    BlockFace attachedFace = attachable.getAttachedFace();
+	    Block relative = block.getRelative(attachedFace);
+
+	    if (relative.isEmpty()) {
+		return false;
+	    }
+	}
 	block.setType(BlockHelper.getMaterial(state));
 	block.setData(BlockHelper.getData(state));
 	addOriginalBlock(block, false);
 	planBlocks[x][y][z] = 0;
+
+	return true;
     }
 
     public File getAreaDataFile() {
@@ -1060,7 +1080,7 @@ public class PlanArea {
 	if (name != null && name.length() > 0) {
 	    result.append(name);
 	} else {
-	    result.append("Unnamed: " + sizeX + "x" + sizeZ + "x" + sizeY + " area");
+	    result.append("Unnamed: " + sizeX + "x" + sizeZ + "x" + (sizeY-1) + " area");
 	}
 
 	result.append(committed ? ", committed" : ", planning");

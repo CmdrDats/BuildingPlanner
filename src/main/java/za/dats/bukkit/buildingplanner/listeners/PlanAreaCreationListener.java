@@ -171,7 +171,7 @@ public class PlanAreaCreationListener extends BlockListener {
     private int getDefaultHeight(PlanArea area) {
 	int maxY;
 	if (Config.getDefaultHeight() != 0) {
-	    maxY = Math.max(area.getMinY() + Config.getDefaultHeight(), area.getMaxY());
+	    maxY = Math.max(area.getMinY() + 1 + Config.getDefaultHeight(), area.getMaxY());
 	} else {
 	    // Add the middle amount between the z and x size as an extra y size
 	    // Seems like a good height measure

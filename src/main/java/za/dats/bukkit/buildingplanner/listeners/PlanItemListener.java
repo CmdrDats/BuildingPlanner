@@ -20,6 +20,7 @@ public class PlanItemListener extends EntityListener {
 	}
 	
 	if (!area.isPlannedBlock(event.getLocation().getBlock())) {
+	    area.addOriginalBlock(event.getLocation().getBlock(), true);
 	    return;
 	}
 	

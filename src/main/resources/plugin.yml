@@ -11,7 +11,7 @@ main: za.dats.bukkit.buildingplanner.BuildingPlanner
 name: BuildingPlanner
 startup: postworld
 url: https://github.com/CmdrDats/BuildingPlanner
-version: '0.5.3'
+version: '0.5.4'
 commands:
   plan:
     aliases: [plancommand]
