@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.List;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.event.Event.Priority;
 import org.bukkit.event.Event.Type;
@@ -36,11 +37,10 @@ public class PlanAreaManager implements PlanAreaListener {
 		.registerEvent(Type.BLOCK_BREAK, areaDestroyListener, Priority.Normal, BuildingPlanner.plugin);
 
 	PlanAreaModificationListener areaModifyListener = new PlanAreaModificationListener();
+	BuildingPlanner.pm.registerEvent(Type.BLOCK_FROMTO, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
 	BuildingPlanner.pm.registerEvent(Type.BLOCK_BREAK, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
 	BuildingPlanner.pm
 		.registerEvent(Type.BLOCK_IGNITE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
-	BuildingPlanner.pm.registerEvent(Type.BLOCK_PHYSICS, areaModifyListener, Priority.Normal,
-		BuildingPlanner.plugin);
 	BuildingPlanner.pm
 		.registerEvent(Type.BLOCK_DAMAGE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
 	BuildingPlanner.pm.registerEvent(Type.BLOCK_PLACE, areaModifyListener, Priority.Normal, BuildingPlanner.plugin);
@@ -205,5 +205,28 @@ public class PlanAreaManager implements PlanAreaListener {
 
     public List<PlanArea> getPlanList() {
 	return Collections.unmodifiableList(planAreas);
+    }
+
+    public boolean validBlockType(Material type) {
+	// Disable sand and gravel entirely until I can figure out how to listen correctly for the physics events
+	if (type.equals(Material.SAND) || type.equals(Material.GRAVEL)) {
+	    return false;
+	}
+	
+	List<Material> whiteList = Config.getWhiteList();
+	if (whiteList.size() > 0) {
+	    if (whiteList.contains(type)) {
+		return true;
+	    }
+	    // If not in whitelist, default to invalid block, regardless of blacklist.
+	    return false;
+	}
+	
+	List<Material> blacklist = Config.getBlacklist();
+	if (blacklist.contains(type)) {
+	    return false;
+	}
+	
+	return true;
     }
 }

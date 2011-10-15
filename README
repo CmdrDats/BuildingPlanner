@@ -7,6 +7,12 @@ Not only does it let you place infinite blocks, but when you make mistakes, a si
 
 ChangeLog
 ---------
+v0.6.0
+	- In plan list and reports, include world name.
+	- Make water & lava not flow in planning areas.
+	- Added blacklisting/whitelisting of blocks for planning area (whitelisting overrides blacklisting)
+	- Disable placing sand and gravel in planning areas (no way of properly handling them in plans currently)
+	
 v0.5.4
 	- FIX: Chest dup issue when creating and destroying plans.
 	- FIX: Issue with default height not calculating quite correctly.

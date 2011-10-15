@@ -609,7 +609,7 @@ public class PlanArea {
 	HashMap<String, AtomicLong> counts = getMaterialCount();
 
 	String planName = name == null ? "The plan" : name;
-
+	planName = signBlock.getWorld().getName()+":"+planName;
 	if (counts.size() == 0) {
 	    player.sendMessage(planName + " has no required materials yet.");
 	    return;

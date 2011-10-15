@@ -7,8 +7,12 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockCanBuildEvent;
 import org.bukkit.event.block.BlockDamageEvent;
+import org.bukkit.event.block.BlockFormEvent;
+import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.block.BlockListener;
 import org.bukkit.event.block.BlockPhysicsEvent;
@@ -18,6 +22,7 @@ import org.bukkit.material.Bed;
 import org.bukkit.material.Door;
 
 import za.dats.bukkit.buildingplanner.BuildingPlanner;
+import za.dats.bukkit.buildingplanner.Config;
 import za.dats.bukkit.buildingplanner.model.PlanArea;
 import za.dats.bukkit.buildingplanner.model.PlanArea.OpType;
 
@@ -38,6 +43,19 @@ public class PlanAreaModificationListener extends BlockListener {
 	    return;
 	}
         super.onBlockIgnite(event);
+    }
+
+    @Override
+    public void onBlockFromTo(BlockFromToEvent event) {
+	if (event.isCancelled()) {
+	    return;
+	}
+	PlanArea area = BuildingPlanner.plugin.areaManager.getAffectedArea(event.getBlock());
+	if (area == null) {
+	    return;
+	}
+	
+	event.setCancelled(true);
     }
     
     @Override
@@ -161,8 +179,15 @@ public class PlanAreaModificationListener extends BlockListener {
 	    return;
 	}
 
+	if (!validBlock(event.getBlockPlaced())) {
+	    event.getPlayer().sendMessage("This block is not allowed to be placed in planning area");
+	    event.setCancelled(true);
+	    return;
+	}
+	
 	final ItemStack itemInHand = player.getItemInHand();
 	final Material type = itemInHand.getType();
+	
 	final short durability = itemInHand.getDurability();
 	int task = BuildingPlanner.plugin.getServer().getScheduler()
 		.scheduleSyncDelayedTask(BuildingPlanner.plugin, new Runnable() {
@@ -181,6 +206,11 @@ public class PlanAreaModificationListener extends BlockListener {
 		});
 
 	super.onBlockPlace(event);
+    }
+    
+    private boolean validBlock(Block blockPlaced) {
+	Material type = blockPlaced.getType();
+	return BuildingPlanner.plugin.areaManager.validBlockType(type);
     }
 
     protected void addBlockToArea(final Block block, final Player player, final PlanArea area, final Material type,

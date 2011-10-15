@@ -235,7 +235,7 @@ public class PlanPluginCommand implements CommandExecutor {
 	
 	player.sendMessage("Plan Area List:");
 	for (PlanArea planArea : planList) {
-	    player.sendMessage(planArea.getAreaName());
+	    player.sendMessage(planArea.getSignBlock().getWorld().getName()+": "+planArea.getAreaName());
 	}
     }
 

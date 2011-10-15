@@ -37,31 +37,51 @@ public class PlayerAreaListener extends PlayerListener {
 	if (area == null) {
 	    return;
 	}
-	
+
+	ItemStack item = event.getItem();
+	if (item != null) {
+	    boolean allowed = true;
+	    if (item.getType().equals(Material.LAVA_BUCKET)
+		    && !BuildingPlanner.plugin.areaManager.validBlockType(Material.LAVA)) {
+		allowed = false;
+	    }
+
+	    if (item.getType().equals(Material.WATER_BUCKET)
+		    && !BuildingPlanner.plugin.areaManager.validBlockType(Material.WATER)) {
+		allowed = false;
+	    }
+	    if (!allowed) {
+		event.getPlayer().sendMessage("Cannot use this item in a planning area.");
+		event.setCancelled(true);
+		return;
+	    }
+	}
+
 	switch (event.getClickedBlock().getType()) {
-	case CAKE_BLOCK :
-	case BED_BLOCK :
-	case CHEST :
-	case FURNACE :
-	case BURNING_FURNACE :
-	case LOCKED_CHEST :
-	case WORKBENCH :
+	case CAKE_BLOCK:
+	case BED_BLOCK:
+	case CHEST:
+	case FURNACE:
+	case BURNING_FURNACE:
+	case LOCKED_CHEST:
+	case WORKBENCH:
 	    if (!area.isCommitted() && area.isPlannedBlock(event.getClickedBlock())) {
 		event.setCancelled(true);
 		return;
 	    }
 	}
-	
+
 	if (area.getSignBlock() != event.getClickedBlock()) {
 	    return;
 	}
 
 	if (area.isLocked()) {
-	    event.getPlayer().sendMessage("Area is locked: "+area.getLockReason());
+	    event.getPlayer().sendMessage("Area is locked: " + area.getLockReason());
 	    event.setCancelled(true);
 	    return;
 	}
-	
+
+	event.setCancelled(true);
 	Date clickDate = new Date();
 	if (area.isCommitted()) {
 	    if (area.getCommitAttemptTime() != null
@@ -99,7 +119,7 @@ public class PlayerAreaListener extends PlayerListener {
 	    event.getPlayer().sendMessage("To commit this plan, right click the sign again within 5 seconds.");
 	}
     }
-    
+
     public void onPlayerMove(PlayerMoveEvent event) {
 	if (event.isCancelled()) {
 	    return;
@@ -108,14 +128,14 @@ public class PlayerAreaListener extends PlayerListener {
 	    return;
 	}
 	PlanArea fromArea = BuildingPlanner.plugin.areaManager.getAffectedArea(event.getFrom());
-	
+
 	PlanArea toArea = BuildingPlanner.plugin.areaManager.getAffectedArea(event.getTo());
-	
+
 	if (fromArea == null && toArea != null) {
 	    event.getPlayer().setGameMode(GameMode.CREATIVE);
 	} else if (fromArea != null && toArea == null) {
 	    event.getPlayer().setGameMode(GameMode.SURVIVAL);
-	    
+
 	}
     };
 

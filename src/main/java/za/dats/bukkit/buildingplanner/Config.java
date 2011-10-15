@@ -1,7 +1,9 @@
 package za.dats.bukkit.buildingplanner;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.bukkit.DyeColor;
 import org.bukkit.Material;
@@ -41,6 +43,12 @@ public class Config {
 	defaults.put("protectedFromFalling", true);
 	defaults.put("ownerEditOnly", true);
 	defaults.put("useCreativeMode", false);
+	
+	defaults.put("whitelist", new ArrayList<String>());
+	ArrayList<String> blackList = new ArrayList<String>();
+	blackList.add(Material.LAVA.toString());
+	blackList.add(Material.WATER.toString());
+	defaults.put("blacklist", blackList);
 	/*
 	defaults.put("lang.createConfirm", "&EBuilt <name>!");
 	defaults.put("lang.destroyed", "&EDestroyed Memory Stone Structure!");
@@ -140,5 +148,34 @@ public class Config {
     public static boolean isCreativeModeEnabled() {
 	return conf.getBoolean("useCreativeMode", false);
     }
-                                            
+ 
+    public static List<Material> getWhiteList() {
+	List<String> whitelist = conf.getStringList("whitelist", new ArrayList<String>());
+	List<Material> result = new ArrayList<Material>();
+	for (String materialString : whitelist) {
+	    Material material = Material.getMaterial(materialString);
+	    if (material == null) {
+		BuildingPlanner.info("Whitelist item, "+materialString+", could not be mapped to a valid material");
+		continue;
+	    }
+	    result.add(material);
+	}
+	
+	return result;
+    }
+    
+    public static List<Material> getBlacklist() {
+	List<String> whitelist = conf.getStringList("blacklist", new ArrayList<String>());
+	List<Material> result = new ArrayList<Material>();
+	for (String materialString : whitelist) {
+	    Material material = Material.getMaterial(materialString);
+	    if (material == null) {
+		BuildingPlanner.info("Blacklist item, "+materialString+", could not be mapped to a valid material");
+		continue;
+	    }
+	    result.add(material);
+	}
+	
+	return result;
+    }
 }
